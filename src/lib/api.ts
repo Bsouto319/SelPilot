@@ -101,7 +101,7 @@ export async function sendFollowUp(lead: any, templateKey: string): Promise<bool
 export async function fetchLeads(search = '') {
   let q = supabase
     .from('sp_leads')
-    .select('*')
+    .select('*, vendedor:sp_vendedores(id,nome,phone)')
     .order('created_at', { ascending: false });
   if (search) q = q.or(`name.ilike.%${search}%,phone.ilike.%${search}%,whatsapp_name.ilike.%${search}%`);
   const { data, error } = await q;

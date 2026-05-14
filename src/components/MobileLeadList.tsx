@@ -57,8 +57,8 @@ export default function MobileLeadList({ leads, onSelect, onToggleAi }: { leads:
                   <span className="text-xs text-white/30 shrink-0">{formatTime(lead.last_message_at ?? lead.created_at)}</span>
                 </div>
 
-                {/* Row 2: stage + score */}
-                <div className="flex items-center gap-2 mb-1.5">
+                {/* Row 2: stage + score + nota fiscal + vendedor */}
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   {stage && (
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stage.color}`}>{stage.label}</span>
                   )}
@@ -68,6 +68,12 @@ export default function MobileLeadList({ leads, onSelect, onToggleAi }: { leads:
                       lead.score >= 40 ? 'bg-amber-500/20 text-amber-400' :
                                         'bg-rose-500/20 text-rose-400'
                     }`}>{lead.score}%</span>
+                  )}
+                  {lead.needs_invoice && (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">🧾 NF</span>
+                  )}
+                  {lead.vendedor?.nome && (
+                    <span className="text-[9px] font-bold text-emerald-400/60">{lead.vendedor.nome}</span>
                   )}
                 </div>
 

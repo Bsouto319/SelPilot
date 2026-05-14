@@ -90,12 +90,15 @@ export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]
 
                     {/* Bottom row: vendedor + score + time + IA toggle */}
                     <div className="flex items-center justify-between mt-1">
-                      {/* Vendedor */}
+                      {/* Vendedor + nota fiscal */}
                       <div className="flex items-center gap-1.5">
                         <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-sm shrink-0">
-                          <span className="text-white font-black text-[9px]">C</span>
+                          <span className="text-white font-black text-[9px]">{(lead.vendedor?.nome ?? 'S')[0].toUpperCase()}</span>
                         </div>
-                        <span className="text-[10px] font-bold text-emerald-400/70">Cauã</span>
+                        <span className="text-[10px] font-bold text-emerald-400/70">{lead.vendedor?.nome ?? 'Sem vendedor'}</span>
+                        {lead.needs_invoice && (
+                          <span className="text-[9px] font-black px-1 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30" title="Cliente solicitou nota fiscal">🧾</span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">

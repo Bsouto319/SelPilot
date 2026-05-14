@@ -5,7 +5,7 @@ import MobileLeadList from './components/MobileLeadList';
 import LeadModal from './components/LeadModal';
 import ReportModal from './components/ReportModal';
 import ConnectionStatus from './components/ConnectionStatus';
-import { fetchLeads, fetchStats, exportLeadsCSV } from './lib/api';
+import { fetchLeads, fetchStats, exportLeadsCSV, updateLeadAiMode } from './lib/api';
 import { supabase } from './lib/supabase';
 
 export default function App() {
@@ -39,6 +39,11 @@ export default function App() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [load]);
+
+  async function handleToggleAi(id: string, newMode: boolean) {
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, ai_mode: newMode } : l));
+    await updateLeadAiMode(id, newMode);
+  }
 
   function handleSearch(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;
@@ -161,11 +166,11 @@ export default function App() {
           <>
             {/* Desktop: kanban */}
             <div className="hidden sm:block h-full px-6 pb-6">
-              <Pipeline leads={leads} onSelect={setSelected} />
+              <Pipeline leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} />
             </div>
             {/* Mobile: lista vertical */}
             <div className="sm:hidden h-full overflow-y-auto">
-              <MobileLeadList leads={leads} onSelect={setSelected} />
+              <MobileLeadList leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} />
             </div>
           </>
         )}

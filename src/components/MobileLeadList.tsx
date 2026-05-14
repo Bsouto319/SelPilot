@@ -11,7 +11,7 @@ function formatTime(d: string) {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
 }
 
-export default function MobileLeadList({ leads, onSelect }: { leads: any[]; onSelect: (l: any) => void }) {
+export default function MobileLeadList({ leads, onSelect, onToggleAi }: { leads: any[]; onSelect: (l: any) => void; onToggleAi: (id: string, newMode: boolean) => void }) {
   const sorted = [...leads].sort((a, b) =>
     new Date(b.last_message_at ?? b.created_at).getTime() - new Date(a.last_message_at ?? a.created_at).getTime()
   );
@@ -77,6 +77,22 @@ export default function MobileLeadList({ leads, onSelect }: { leads: any[]; onSe
                 ) : lead.first_message ? (
                   <p className="text-xs text-white/35 line-clamp-1">{lead.first_message}</p>
                 ) : null}
+
+                {/* IA toggle */}
+                {!['fechado','perdido'].includes(lead.stage) && (
+                  <div className="mt-2 flex">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleAi(lead.id, !lead.ai_mode); }}
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-full border transition-all ${
+                        lead.ai_mode
+                          ? 'bg-violet-500/25 text-violet-300 border-violet-500/50'
+                          : 'bg-white/5 text-white/20 border-white/10'
+                      }`}
+                    >
+                      🤖 IA {lead.ai_mode ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </button>

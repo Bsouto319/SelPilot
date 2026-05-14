@@ -15,7 +15,7 @@ function formatTime(d: string) {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
 }
 
-export default function Pipeline({ leads, onSelect }: { leads: any[]; onSelect: (l: any) => void }) {
+export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]; onSelect: (l: any) => void; onToggleAi: (id: string, newMode: boolean) => void }) {
   const byStage = (key: string) => leads.filter(l => l.stage === key);
 
   return (
@@ -88,7 +88,7 @@ export default function Pipeline({ leads, onSelect }: { leads: any[]; onSelect: 
                       <p className="text-xs text-white/40 line-clamp-2 mb-2">{lead.first_message}</p>
                     ) : <div className="mb-2" />}
 
-                    {/* Bottom row: vendedor + score + time */}
+                    {/* Bottom row: vendedor + score + time + IA toggle */}
                     <div className="flex items-center justify-between mt-1">
                       {/* Vendedor */}
                       <div className="flex items-center gap-1.5">
@@ -109,6 +109,19 @@ export default function Pipeline({ leads, onSelect }: { leads: any[]; onSelect: 
                           }}>
                             {lead.score}%
                           </span>
+                        )}
+                        {!['fechado','perdido'].includes(lead.stage) && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onToggleAi(lead.id, !lead.ai_mode); }}
+                            title={lead.ai_mode ? 'IA ligada — clique para desligar' : 'IA desligada — clique para ligar'}
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border transition-all ${
+                              lead.ai_mode
+                                ? 'bg-violet-500/25 text-violet-300 border-violet-500/50 shadow-sm shadow-violet-500/20'
+                                : 'bg-white/5 text-white/20 border-white/10'
+                            }`}
+                          >
+                            🤖 {lead.ai_mode ? 'ON' : 'OFF'}
+                          </button>
                         )}
                       </div>
                     </div>

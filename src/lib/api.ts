@@ -143,6 +143,14 @@ export async function updateLeadStage(id: string, stage: string) {
   if (error) console.error('updateLeadStage', error.message);
 }
 
+export async function updateLeadAiMode(id: string, aiMode: boolean) {
+  const { error } = await supabase
+    .from('sp_leads')
+    .update({ ai_mode: aiMode, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) console.error('updateLeadAiMode', error.message);
+}
+
 export async function updateLeadNotes(id: string, notes: string) {
   const { error } = await supabase
     .from('sp_leads')

@@ -1,13 +1,13 @@
 import { supabase } from './supabase';
 
 export const STAGES = [
-  { key: 'novo_lead',        label: 'Novo Lead',        color: 'bg-slate-100 text-slate-600' },
-  { key: 'em_contato',       label: 'Em Contato',       color: 'bg-sky-100 text-sky-700' },
-  { key: 'interessado',      label: 'Interessado',      color: 'bg-amber-100 text-amber-700' },
-  { key: 'proposta_enviada', label: 'Proposta Enviada', color: 'bg-purple-100 text-purple-700' },
-  { key: 'negociando',       label: 'Negociando',       color: 'bg-orange-100 text-orange-700' },
-  { key: 'fechado',          label: 'Fechado ✅',        color: 'bg-emerald-100 text-emerald-700' },
-  { key: 'perdido',          label: 'Perdido ❌',        color: 'bg-rose-100 text-rose-600' },
+  { key: 'novo_lead',        label: 'Novo Lead',        color: 'bg-green-400/15 text-green-300',    headerBg: '#16a34a', cardBorder: '#22c55e' },
+  { key: 'em_contato',       label: 'Em Contato',       color: 'bg-sky-400/15 text-sky-300',        headerBg: '#0284c7', cardBorder: '#38bdf8' },
+  { key: 'interessado',      label: 'Interessado',      color: 'bg-amber-400/15 text-amber-300',    headerBg: '#d97706', cardBorder: '#fbbf24' },
+  { key: 'proposta_enviada', label: 'Proposta',         color: 'bg-purple-400/15 text-purple-300',  headerBg: '#7c3aed', cardBorder: '#a78bfa' },
+  { key: 'negociando',       label: 'Negociando',       color: 'bg-orange-400/15 text-orange-300',  headerBg: '#ea580c', cardBorder: '#fb923c' },
+  { key: 'fechado',          label: 'Fechado ✅',        color: 'bg-emerald-400/15 text-emerald-300', headerBg: '#059669', cardBorder: '#34d399' },
+  { key: 'perdido',          label: 'Perdido ❌',        color: 'bg-rose-400/15 text-rose-300',      headerBg: '#dc2626', cardBorder: '#f87171' },
 ];
 
 // ── Follow-up templates ─────────────────────────────────────────────────────

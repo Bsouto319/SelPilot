@@ -36,7 +36,8 @@ export default function MobileLeadList({ leads, onSelect }: { leads: any[]; onSe
           <button
             key={lead.id}
             onClick={() => onSelect(lead)}
-            className="w-full text-left bg-white/5 border border-white/8 hover:border-emerald-500/40 active:bg-white/10 rounded-2xl p-4 transition-all"
+            className="w-full text-left bg-[#111c30] border border-white/8 hover:border-white/20 active:bg-[#162040] rounded-xl p-4 transition-all"
+            style={{ borderLeftWidth: 3, borderLeftColor: (STAGES.find(s => s.key === lead.stage) as any)?.cardBorder ?? '#6b7280' }}
           >
             <div className="flex items-start gap-3">
               {/* Avatar */}

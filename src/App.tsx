@@ -54,7 +54,7 @@ export default function App() {
   ];
 
   return (
-    <div className="h-screen bg-[#0a0f1e] flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'linear-gradient(160deg, #060d1f 0%, #0b1628 50%, #07101e 100%)' }}>
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <header className="flex-shrink-0 border-b border-white/5">
@@ -127,7 +127,7 @@ export default function App() {
       {/* ── Stats Cards ─────────────────────────────────────────── */}
       <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {statCards.map(({ label, value, icon: Icon, bg, shadow }) => (
-          <div key={label} className="bg-white/5 border border-white/8 rounded-2xl p-4 flex items-center gap-4">
+          <div key={label} className="bg-white/[0.04] border border-white/10 rounded-xl p-4 flex items-center gap-4 hover:bg-white/[0.07] transition-colors">
             <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center shadow-lg ${shadow} flex-shrink-0`}>
               <Icon size={20} className="text-white" />
             </div>

@@ -115,7 +115,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 print:border-slate-200 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg print:hidden">
               <BarChart3 size={18} className="text-white" />
             </div>
             <div>
@@ -220,7 +220,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
                   { label: 'Score Médio', value: m.score_medio ? `${m.score_medio}%` : '–', icon: Star, color: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/30' },
                 ].map(({ label, value, icon: Icon, color, shadow }) => (
                   <div key={label} className="bg-white/5 print:bg-slate-50 border border-white/8 print:border-slate-200 rounded-2xl p-3 flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg ${shadow} shrink-0`}>
+                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg ${shadow} shrink-0 print:hidden`}>
                       <Icon size={16} className="text-white" />
                     </div>
                     <div>
@@ -349,7 +349,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
                           const stage = STAGES.find(s => s.key === l.stage);
                           return (
                             <div key={i} className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-green-700 flex items-center justify-center shrink-0">
+                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-green-700 flex items-center justify-center shrink-0 print:hidden">
                                 <span className="text-white text-xs font-bold">{(l.nome[0] || 'L').toUpperCase()}</span>
                               </div>
                               <div className="flex-1 min-w-0">

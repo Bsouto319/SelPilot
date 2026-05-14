@@ -5,7 +5,7 @@ import MobileLeadList from './components/MobileLeadList';
 import LeadModal from './components/LeadModal';
 import ReportModal from './components/ReportModal';
 import ConnectionStatus from './components/ConnectionStatus';
-import { fetchLeads, fetchStats, exportLeadsCSV, updateLeadAiMode } from './lib/api';
+import { fetchLeads, fetchStats, exportLeadsCSV, updateLeadAiMode, fetchBiaGlobalMode, setBiaGlobalMode } from './lib/api';
 import { supabase } from './lib/supabase';
 
 export default function App() {
@@ -16,6 +16,8 @@ export default function App() {
   const [showReport, setShowReport] = useState(false);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [biaActive, setBiaActive] = useState(false);
+  const [biaLoading, setBiaLoading] = useState(false);
 
   const searchRef = useRef(search);
   searchRef.current = search;
@@ -29,7 +31,10 @@ export default function App() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetchBiaGlobalMode().then(setBiaActive);
+  }, []);
 
   // Realtime — atualiza ao mudar qualquer lead
   useEffect(() => {
@@ -39,6 +44,15 @@ export default function App() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [load]);
+
+  async function handleToggleBiaGlobal() {
+    const next = !biaActive;
+    setBiaActive(next);
+    setBiaLoading(true);
+    await setBiaGlobalMode(next);
+    await load();
+    setBiaLoading(false);
+  }
 
   async function handleToggleAi(id: string, newMode: boolean) {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, ai_mode: newMode } : l));
@@ -103,6 +117,22 @@ export default function App() {
           {/* Actions */}
           <div className="ml-auto flex items-center gap-3">
             <ConnectionStatus />
+
+            {/* Botão global BIA */}
+            <button
+              onClick={handleToggleBiaGlobal}
+              disabled={biaLoading}
+              title={biaActive ? 'Bia ativa — clique para desligar' : 'Bia inativa — clique para ligar'}
+              className={`flex items-center gap-1.5 font-black px-3 py-2.5 rounded-xl text-sm border transition-all shadow-lg ${
+                biaActive
+                  ? 'bg-violet-600 hover:bg-violet-700 border-violet-500/50 text-white shadow-violet-500/30'
+                  : 'bg-white/5 hover:bg-white/10 border-white/15 text-white/40'
+              } ${biaLoading ? 'opacity-60 cursor-wait' : ''}`}
+            >
+              <span className="text-base leading-none">🤖</span>
+              <span className="hidden sm:inline">{biaActive ? 'BIA ON' : 'BIA OFF'}</span>
+            </button>
+
             <button
               onClick={() => setShowReport(true)}
               className="flex items-center gap-1.5 bg-violet-600/80 hover:bg-violet-600 border border-violet-500/30 text-white font-semibold px-3 py-2.5 rounded-xl text-sm transition shadow-lg shadow-violet-500/20"

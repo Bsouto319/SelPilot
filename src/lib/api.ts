@@ -159,6 +159,20 @@ export async function updateLeadNotes(id: string, notes: string) {
   if (error) console.error('updateLeadNotes', error.message);
 }
 
+export async function fetchBiaGlobalMode(): Promise<boolean> {
+  const { data } = await supabase.from('sp_config').select('value').eq('key', 'bia_global_mode').maybeSingle();
+  return data?.value === 'true';
+}
+
+export async function setBiaGlobalMode(active: boolean): Promise<void> {
+  await supabase.from('sp_config').upsert({ key: 'bia_global_mode', value: active ? 'true' : 'false', updated_at: new Date().toISOString() });
+  if (active) {
+    // Liga ai_mode em todos os leads ativos
+    await supabase.from('sp_leads').update({ ai_mode: true, updated_at: new Date().toISOString() })
+      .not('stage', 'in', '("fechado","perdido")');
+  }
+}
+
 export async function deleteLead(id: string) {
   const { error } = await supabase.from('sp_leads').delete().eq('id', id);
   if (error) console.error('deleteLead', error.message);

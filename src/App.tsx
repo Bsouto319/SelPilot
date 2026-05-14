@@ -54,10 +54,10 @@ export default function App() {
   ];
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'linear-gradient(160deg, #060d1f 0%, #0b1628 50%, #07101e 100%)' }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'linear-gradient(160deg, #0e1f4a 0%, #162d6b 40%, #0f2057 100%)' }}>
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="flex-shrink-0 border-b border-white/5">
+      <header className="flex-shrink-0 border-b border-white/10" style={{ background: 'rgba(10,20,60,0.7)', backdropFilter: 'blur(12px)' }}>
         {/* Top row */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
 
@@ -67,8 +67,8 @@ export default function App() {
               <span className="text-white font-black text-sm sm:text-base">S</span>
             </div>
             <div>
-              <p className="text-white font-black text-base sm:text-lg leading-none">SellPilot</p>
-              <p className="text-white/30 text-xs font-medium">Loja Probel</p>
+              <p className="text-white font-black text-lg sm:text-xl leading-none tracking-tight">SellPilot</p>
+              <p className="text-blue-200/50 text-xs font-bold tracking-wide">LOJA PROBEL</p>
             </div>
           </div>
 
@@ -127,13 +127,13 @@ export default function App() {
       {/* ── Stats Cards ─────────────────────────────────────────── */}
       <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {statCards.map(({ label, value, icon: Icon, bg, shadow }) => (
-          <div key={label} className="bg-white/[0.04] border border-white/10 rounded-xl p-4 flex items-center gap-4 hover:bg-white/[0.07] transition-colors">
-            <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center shadow-lg ${shadow} flex-shrink-0`}>
-              <Icon size={20} className="text-white" />
+          <div key={label} className="border border-white/10 rounded-xl p-4 flex items-center gap-4 hover:bg-white/[0.06] transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center shadow-lg ${shadow} flex-shrink-0`}>
+              <Icon size={22} className="text-white" />
             </div>
             <div>
-              <p className="text-3xl font-black text-white leading-none">{loading ? '–' : value}</p>
-              <p className="text-white/40 text-xs font-medium mt-0.5">{label}</p>
+              <p className="text-4xl font-black text-white leading-none">{loading ? '–' : value}</p>
+              <p className="text-blue-200/60 text-xs font-black tracking-widest uppercase mt-1">{label}</p>
             </div>
           </div>
         ))}

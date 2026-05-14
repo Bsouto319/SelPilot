@@ -80,14 +80,37 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
     setSending(false);
   }
 
-  function handlePrint() { window.print(); }
+  function handlePrint() {
+    const style = document.createElement('style');
+    style.id = 'sp-print-style';
+    style.textContent = `
+      @media print {
+        body * { visibility: hidden !important; }
+        #report-print-area, #report-print-area * { visibility: visible !important; }
+        #report-print-area {
+          position: fixed !important;
+          inset: 0 !important;
+          width: 100vw !important;
+          max-height: none !important;
+          overflow: visible !important;
+          background: white !important;
+          padding: 24px !important;
+          box-sizing: border-box !important;
+        }
+        #report-print-area * { max-height: none !important; overflow: visible !important; }
+      }
+    `;
+    document.head.appendChild(style);
+    window.print();
+    setTimeout(() => document.getElementById('sp-print-style')?.remove(), 500);
+  }
 
   const m  = report?.metricas;
   const ia = report?.ia;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 print:static print:block print:p-0 print:bg-white">
-      <div className="bg-[#0d1426] print:bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[95vh] flex flex-col border border-white/8 print:max-h-none print:max-w-none print:rounded-none print:border-0 print:shadow-none print:flex-none">
+      <div id="report-print-area" className="bg-[#0d1426] print:bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[95vh] flex flex-col border border-white/8 print:max-h-none print:max-w-none print:rounded-none print:border-0 print:shadow-none print:flex-none">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 print:border-slate-200 flex-shrink-0">

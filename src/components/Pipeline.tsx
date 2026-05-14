@@ -45,7 +45,8 @@ export default function Pipeline({ leads, onSelect }: { leads: any[]; onSelect: 
                 const lastMsg   = lead.last_message_at ?? lead.created_at;
                 const idleHours = minutesSince(lastMsg) / 60;
                 const semAtend  = !['fechado','perdido'].includes(lead.stage) && idleHours >= 2;
-                const displayName = lead.name || lead.whatsapp_name || 'Lead';
+                const rawName = lead.name || lead.whatsapp_name;
+                const displayName = rawName || `+${lead.phone}`;
                 return (
                   <button
                     key={lead.id}

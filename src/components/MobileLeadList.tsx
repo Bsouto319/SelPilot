@@ -28,7 +28,7 @@ export default function MobileLeadList({ leads, onSelect }: { leads: any[]; onSe
   return (
     <div className="space-y-2 px-4 py-3 overflow-y-auto">
       {sorted.map(lead => {
-        const displayName = lead.name || lead.whatsapp_name || 'Lead';
+        const displayName = lead.name || lead.whatsapp_name || `+${lead.phone}`;
         const stage = STAGES.find(s => s.key === lead.stage);
         const isNew = (Date.now() - new Date(lead.created_at).getTime()) < 3600000;
 

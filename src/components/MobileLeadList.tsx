@@ -92,7 +92,7 @@ export default function MobileLeadList({ leads, onSelect, onToggleAi }: { leads:
                       className={`text-[10px] font-black px-2 py-0.5 rounded-full border transition-all ${
                         lead.ai_mode
                           ? 'bg-violet-500/25 text-violet-300 border-violet-500/50'
-                          : 'bg-white/5 text-white/20 border-white/10'
+                          : 'bg-white/10 text-white/50 border-white/25'
                       }`}
                     >
                       🤖 IA {lead.ai_mode ? 'ON' : 'OFF'}

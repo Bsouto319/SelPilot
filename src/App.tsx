@@ -4,6 +4,7 @@ import Pipeline from './components/Pipeline';
 import MobileLeadList from './components/MobileLeadList';
 import LeadModal from './components/LeadModal';
 import ReportModal from './components/ReportModal';
+import ConnectionStatus from './components/ConnectionStatus';
 import { fetchLeads, fetchStats, exportLeadsCSV } from './lib/api';
 import { supabase } from './lib/supabase';
 
@@ -83,7 +84,8 @@ export default function App() {
           </div>
 
           {/* Actions */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
+            <ConnectionStatus />
             <button
               onClick={() => setShowReport(true)}
               className="flex items-center gap-1.5 bg-violet-600/80 hover:bg-violet-600 border border-violet-500/30 text-white font-semibold px-3 py-2.5 rounded-xl text-sm transition shadow-lg shadow-violet-500/20"

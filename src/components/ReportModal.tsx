@@ -122,7 +122,13 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
 
     msg += `${sep}\n_SellPilot by BTechSouto_ 🤖`;
 
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    const a = document.createElement('a');
+    a.href = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function handlePrint() {

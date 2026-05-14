@@ -49,7 +49,7 @@ export default function App() {
   const statCards = [
     { label: 'Leads Hoje',  value: stats.hoje,       icon: Users,        bg: 'bg-sky-500',     shadow: 'shadow-sky-500/30'     },
     { label: 'Negociando',  value: stats.negociando, icon: TrendingUp,   bg: 'bg-amber-500',   shadow: 'shadow-amber-500/30'   },
-    { label: 'Fechados',    value: stats.fechados,   icon: CheckCircle2, bg: 'bg-emerald-500', shadow: 'shadow-emerald-500/30' },
+    { label: 'Visitas',     value: stats.fechados,   icon: CheckCircle2, bg: 'bg-emerald-500', shadow: 'shadow-emerald-500/30' },
     { label: 'Total',       value: stats.total,      icon: BarChart3,    bg: 'bg-violet-500',  shadow: 'shadow-violet-500/30'  },
   ];
 

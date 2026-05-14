@@ -192,7 +192,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4">
                 {[
                   { label: 'Total Leads', value: m.total, icon: Users, color: 'from-sky-500 to-blue-600', shadow: 'shadow-sky-500/30' },
-                  { label: 'Fechados', value: m.fechados, icon: CheckCircle2, color: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/30' },
+                  { label: 'Visitas', value: m.fechados, icon: CheckCircle2, color: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/30' },
                   { label: 'Conversão', value: `${m.conversao}%`, icon: TrendingUp, color: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/30' },
                   { label: 'Score Médio', value: m.score_medio ? `${m.score_medio}%` : '–', icon: Star, color: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/30' },
                 ].map(({ label, value, icon: Icon, color, shadow }) => (

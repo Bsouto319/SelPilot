@@ -72,6 +72,18 @@ export default function App() {
             </div>
           </div>
 
+          {/* Vendedor em destaque */}
+          <div className="hidden sm:flex items-center gap-2.5 ml-2 px-3 py-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow shadow-emerald-500/40 shrink-0">
+              <span className="text-white font-black text-xs">N</span>
+            </div>
+            <div className="leading-tight">
+              <p className="text-emerald-300 font-black text-sm leading-none">Neres</p>
+              <p className="text-emerald-500/60 text-[10px] font-bold tracking-wide">VENDEDOR</p>
+            </div>
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Online" />
+          </div>
+
           {/* Search — hidden on mobile (shown below) */}
           <div className="relative max-w-md w-full hidden sm:block">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />

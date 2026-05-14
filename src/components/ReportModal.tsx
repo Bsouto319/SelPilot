@@ -25,8 +25,6 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
   const [report, setReport]     = useState<any>(null);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
-  const [sending, setSending]   = useState(false);
-  const [sent, setSent]         = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -70,14 +68,61 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
     setLoading(false);
   }
 
-  async function handleSendWhatsApp() {
-    setSending(true);
-    try {
-      await fetch(buildUrl(period, 'whatsapp'));
-      setSent(true);
-      setTimeout(() => setSent(false), 3000);
-    } catch (e) { console.error(e); }
-    setSending(false);
+  function handleSendWhatsApp() {
+    const m  = report?.metricas;
+    const ia = report?.ia;
+    if (!m) return;
+
+    const date = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    const sep  = '━━━━━━━━━━━━━━━━━━━━';
+    const periodLabel = period === 'personalizado'
+      ? `${dateFrom} a ${dateTo}`
+      : { hoje: 'hoje', semana: 'nos últimos 7 dias', mes: 'nos últimos 30 dias' }[period] ?? period;
+
+    let msg = `📊 *Relatório SellPilot*\n`;
+    msg += `📅 ${date}  |  _${periodLabel}_\n`;
+    msg += `${sep}\n\n`;
+    msg += `👥 *Leads recebidos:* ${m.total}\n`;
+    msg += `✅ *Fechados:* ${m.fechados}`;
+    if (m.total > 0) msg += ` _(${m.conversao}% conversão)_`;
+    msg += `\n🔴 *Perdidos:* ${m.perdidos}\n🟡 *Ativos:* ${m.ativos}\n`;
+    if (m.score_medio != null) msg += `🎯 *Score médio:* ${m.score_medio}%\n`;
+    msg += `\n`;
+
+    if (ia) {
+      msg += `${sep}\n📝 *Análise:*\n${ia.resumo_executivo}\n\n`;
+      if (ia.alerta) msg += `🚨 *ALERTA:* ${ia.alerta}\n\n`;
+      if (ia.produtos_mais_pedidos?.length) {
+        msg += `📦 *Mais pedidos:*\n`;
+        ia.produtos_mais_pedidos.slice(0, 4).forEach((p: string, i: number) => { msg += `  ${i+1}. ${p}\n`; });
+        msg += `\n`;
+      }
+      if (ia.objecoes_comuns?.length) {
+        msg += `⚠️ *Objeções:*\n`;
+        ia.objecoes_comuns.slice(0, 3).forEach((o: string) => { msg += `  • ${o}\n`; });
+        msg += `\n`;
+      }
+      if (ia.sugestao_campanha) msg += `🚀 *Campanha:*\n${ia.sugestao_campanha}\n\n`;
+      if (ia.insights?.length) {
+        msg += `💡 *Insights:*\n`;
+        ia.insights.slice(0, 3).forEach((ins: string, i: number) => { msg += `  ${i+1}. ${ins}\n`; });
+        msg += `\n`;
+      }
+    }
+
+    if (report.leads_quentes?.length) {
+      msg += `${sep}\n🔥 *Top Leads:*\n`;
+      report.leads_quentes.slice(0, 5).forEach((l: any) => {
+        const stage = STAGES.find(s => s.key === l.stage);
+        msg += `  • *${l.nome}* — ${l.score}% — ${stage?.label ?? l.stage}\n`;
+        if (l.summary) msg += `    _${l.summary.slice(0, 80)}..._\n`;
+      });
+      msg += `\n`;
+    }
+
+    msg += `${sep}\n_SellPilot by BTechSouto_ 🤖`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   function handlePrint() {
@@ -381,11 +426,10 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
           <div className="flex gap-3 px-5 py-4 border-t border-white/8 print:hidden flex-shrink-0">
             <button
               onClick={handleSendWhatsApp}
-              disabled={sending}
-              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold py-3 rounded-2xl text-sm transition"
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-2xl text-sm transition"
             >
-              {sent ? <CheckCircle2 size={15} /> : <Send size={15} />}
-              {sent ? 'Enviado!' : sending ? 'Enviando...' : 'Enviar via WhatsApp'}
+              <Send size={15} />
+              Compartilhar no WhatsApp
             </button>
             <button
               onClick={handlePrint}

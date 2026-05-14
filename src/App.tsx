@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3 } from 'lucide-react';
+import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText } from 'lucide-react';
 import Pipeline from './components/Pipeline';
 import MobileLeadList from './components/MobileLeadList';
 import LeadModal from './components/LeadModal';
+import ReportModal from './components/ReportModal';
 import { fetchLeads, fetchStats, exportLeadsCSV } from './lib/api';
 import { supabase } from './lib/supabase';
 
@@ -10,7 +11,8 @@ export default function App() {
   const [leads, setLeads]       = useState<any[]>([]);
   const [stats, setStats]       = useState({ hoje: 0, negociando: 0, fechados: 0, total: 0 });
   const [search, setSearch]     = useState('');
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected]   = useState<any>(null);
+  const [showReport, setShowReport] = useState(false);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -83,6 +85,13 @@ export default function App() {
           {/* Actions */}
           <div className="ml-auto flex items-center gap-2">
             <button
+              onClick={() => setShowReport(true)}
+              className="flex items-center gap-1.5 bg-violet-600/80 hover:bg-violet-600 border border-violet-500/30 text-white font-semibold px-3 py-2.5 rounded-xl text-sm transition shadow-lg shadow-violet-500/20"
+            >
+              <FileText size={14} />
+              <span className="hidden sm:inline">Relatório</span>
+            </button>
+            <button
               onClick={() => { setRefreshing(true); load(); }}
               className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition"
               title="Atualizar"
@@ -148,7 +157,7 @@ export default function App() {
         )}
       </main>
 
-      {/* ── Modal ───────────────────────────────────────────────── */}
+      {/* ── Lead Modal ──────────────────────────────────────────── */}
       {selected && (
         <LeadModal
           lead={selected}
@@ -156,6 +165,9 @@ export default function App() {
           onUpdated={() => { load(); setSelected(null); }}
         />
       )}
+
+      {/* ── Report Modal ─────────────────────────────────────────── */}
+      {showReport && <ReportModal onClose={() => setShowReport(false)} />}
     </div>
   );
 }

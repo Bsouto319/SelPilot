@@ -87,19 +87,29 @@ export default function Pipeline({ leads, onSelect }: { leads: any[]; onSelect: 
                       <p className="text-xs text-white/40 line-clamp-2 mb-2">{lead.first_message}</p>
                     ) : <div className="mb-2" />}
 
-                    {/* Score + Time */}
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold ${semAtend ? 'text-red-400' : 'text-white/30'}`}>
-                        {semAtend ? '⚠ ' : ''}{formatTime(lastMsg)}
-                      </span>
-                      {lead.score != null && (
-                        <span className="text-xs font-black px-1.5 py-0.5 rounded-full" style={{
-                          backgroundColor: lead.score >= 70 ? '#22c55e22' : lead.score >= 40 ? '#f59e0b22' : '#ef444422',
-                          color:           lead.score >= 70 ? '#4ade80'   : lead.score >= 40 ? '#fbbf24'   : '#f87171',
-                        }}>
-                          {lead.score}%
+                    {/* Bottom row: vendedor + score + time */}
+                    <div className="flex items-center justify-between mt-1">
+                      {/* Vendedor */}
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-sm shrink-0">
+                          <span className="text-white font-black text-[9px]">N</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-400/70">Neres</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold ${semAtend ? 'text-red-400' : 'text-white/25'}`}>
+                          {semAtend ? '⚠ ' : ''}{formatTime(lastMsg)}
                         </span>
-                      )}
+                        {lead.score != null && (
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full" style={{
+                            backgroundColor: lead.score >= 70 ? '#22c55e22' : lead.score >= 40 ? '#f59e0b22' : '#ef444422',
+                            color:           lead.score >= 70 ? '#4ade80'   : lead.score >= 40 ? '#fbbf24'   : '#f87171',
+                          }}>
+                            {lead.score}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );

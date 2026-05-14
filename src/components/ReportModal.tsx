@@ -1,30 +1,52 @@
 import { useEffect, useState, useRef } from 'react';
-import { X, TrendingUp, Users, CheckCircle2, BarChart3, Lightbulb, Megaphone, AlertTriangle, Star, Download, Send, RefreshCw } from 'lucide-react';
+import { X, TrendingUp, Users, CheckCircle2, BarChart3, Lightbulb, Megaphone, AlertTriangle, Star, Download, Send, RefreshCw, CalendarDays } from 'lucide-react';
 import { STAGES } from '../lib/api';
 
-type Period = 'hoje' | 'semana' | 'mes';
+type Period = 'hoje' | 'semana' | 'mes' | 'personalizado';
 
-const PERIOD_LABELS: Record<Period, string> = {
+const PERIOD_LABELS: Record<Exclude<Period, 'personalizado'>, string> = {
   hoje: 'Hoje',
-  semana: 'Últimos 7 dias',
-  mes: 'Últimos 30 dias',
+  semana: '7 dias',
+  mes: '30 dias',
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+function today() { return new Date().toISOString().slice(0, 10); }
+function firstOfMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 export default function ReportModal({ onClose }: { onClose: () => void }) {
-  const [period, setPeriod]   = useState<Period>('semana');
-  const [report, setReport]   = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [sent, setSent]       = useState(false);
+  const [period, setPeriod]     = useState<Period>('semana');
+  const [dateFrom, setDateFrom] = useState(firstOfMonth());
+  const [dateTo, setDateTo]     = useState(today());
+  const [report, setReport]     = useState<any>(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [sending, setSending]   = useState(false);
+  const [sent, setSent]         = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => { fetchReport(period); }, [period]);
+  useEffect(() => {
+    if (period !== 'personalizado') fetchReport(period);
+  }, [period]);
+
+  function buildUrl(p: Period, mode?: string) {
+    const base = `${SUPABASE_URL}/functions/v1/sellpilot-report`;
+    const params = new URLSearchParams();
+    if (p === 'personalizado') {
+      params.set('from', dateFrom);
+      params.set('to', dateTo);
+    } else {
+      params.set('period', p);
+    }
+    if (mode) params.set('mode', mode);
+    return `${base}?${params}`;
+  }
 
   async function fetchReport(p: Period) {
-    // Cancela fetch anterior se ainda estiver em andamento
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
 
@@ -32,9 +54,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
     setReport(null);
     setError(null);
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sellpilot-report?period=${p}`, {
-        signal: abortRef.current.signal,
-      });
+      const res = await fetch(buildUrl(p), { signal: abortRef.current.signal });
       const data = await res.json();
       if (data.error) {
         setError(data.error);
@@ -53,7 +73,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
   async function handleSendWhatsApp() {
     setSending(true);
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/sellpilot-report?period=${period}&mode=whatsapp`);
+      await fetch(buildUrl(period, 'whatsapp'));
       setSent(true);
       setTimeout(() => setSent(false), 3000);
     } catch (e) { console.error(e); }
@@ -86,20 +106,64 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Period tabs */}
-        <div className="flex gap-2 px-5 pt-4 pb-2 flex-shrink-0 print:hidden">
-          {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
-                period === p
+        <div className="px-5 pt-4 pb-2 flex-shrink-0 print:hidden space-y-2">
+          <div className="flex gap-2">
+            {(Object.keys(PERIOD_LABELS) as Exclude<Period, 'personalizado'>[]).map(p => (
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                  period === p
+                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/30'
+                    : 'bg-white/5 text-white/50 hover:bg-white/10'
+                }`}>
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+            <button onClick={() => setPeriod('personalizado')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition ${
+                period === 'personalizado'
                   ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/30'
                   : 'bg-white/5 text-white/50 hover:bg-white/10'
               }`}>
-              {PERIOD_LABELS[p]}
+              <CalendarDays size={12} />
+              Período
             </button>
-          ))}
-          <button onClick={() => fetchReport(period)} className="ml-auto p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition">
-            <RefreshCw size={13} className={`text-white/40 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+            <button onClick={() => fetchReport(period)} className="ml-auto p-1.5 rounded-full bg-white/5 hover:bg-white/10 transition">
+              <RefreshCw size={13} className={`text-white/40 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {/* Date picker row — shown only when "personalizado" is active */}
+          {period === 'personalizado' && (
+            <div className="flex items-center gap-2 pt-1">
+              <div className="flex-1 flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">De</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  max={dateTo}
+                  onChange={e => setDateFrom(e.target.value)}
+                  className="flex-1 bg-transparent text-xs text-white/80 focus:outline-none [color-scheme:dark]"
+                />
+              </div>
+              <div className="flex-1 flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                <span className="text-[10px] text-white/40 font-bold uppercase shrink-0">Até</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom}
+                  max={today()}
+                  onChange={e => setDateTo(e.target.value)}
+                  className="flex-1 bg-transparent text-xs text-white/80 focus:outline-none [color-scheme:dark]"
+                />
+              </div>
+              <button
+                onClick={() => fetchReport('personalizado')}
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-xl transition shrink-0"
+              >
+                Gerar
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content */}

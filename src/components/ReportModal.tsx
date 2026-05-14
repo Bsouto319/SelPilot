@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { X, TrendingUp, Users, CheckCircle2, BarChart3, Lightbulb, Megaphone, AlertTriangle, Star, Download, Send, RefreshCw } from 'lucide-react';
 import { STAGES } from '../lib/api';
 
@@ -16,20 +16,36 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
   const [period, setPeriod]   = useState<Period>('semana');
   const [report, setReport]   = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent]       = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => { fetchReport(period); }, [period]);
 
   async function fetchReport(p: Period) {
+    // Cancela fetch anterior se ainda estiver em andamento
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+
     setLoading(true);
     setReport(null);
+    setError(null);
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sellpilot-report?period=${p}`);
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sellpilot-report?period=${p}`, {
+        signal: abortRef.current.signal,
+      });
       const data = await res.json();
-      setReport(data);
-    } catch (e) {
-      console.error(e);
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setReport(data);
+      }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') {
+        setError('Falha ao carregar relatório. Tente novamente.');
+        console.error(e);
+      }
     }
     setLoading(false);
   }
@@ -50,8 +66,8 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
   const ia = report?.ia;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 print:p-0 print:bg-white print:items-start">
-      <div className="bg-[#0d1426] sm:bg-[#0d1426] print:bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[95vh] flex flex-col border border-white/8 print:max-h-none print:rounded-none print:border-0 print:shadow-none">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 print:static print:block print:p-0 print:bg-white">
+      <div className="bg-[#0d1426] print:bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[95vh] flex flex-col border border-white/8 print:max-h-none print:max-w-none print:rounded-none print:border-0 print:shadow-none print:flex-none">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 print:border-slate-200 flex-shrink-0">
@@ -87,7 +103,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-4 print:overflow-visible">
+        <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-4 print:overflow-visible print:flex-none">
 
           {loading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -96,7 +112,17 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {!loading && report && (
+          {!loading && error && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-4">
+              <AlertTriangle size={32} className="text-rose-400" />
+              <p className="text-rose-300 text-sm">{error}</p>
+              <button onClick={() => fetchReport(period)} className="mt-2 px-4 py-2 bg-white/10 hover:bg-white/15 text-white/70 text-sm rounded-xl transition">
+                Tentar novamente
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && report && report.metricas && (
             <>
               {/* Metrics grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4">
@@ -264,7 +290,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Footer actions */}
-        {!loading && report && (
+        {!loading && !error && report && report.metricas && (
           <div className="flex gap-3 px-5 py-4 border-t border-white/8 print:hidden flex-shrink-0">
             <button
               onClick={handleSendWhatsApp}

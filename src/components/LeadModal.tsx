@@ -107,20 +107,20 @@ export default function LeadModal({
             </a>
           </div>
 
-          {/* ── Follow-up agressivo ─────────────── */}
-          <div className="border border-orange-200 rounded-2xl overflow-hidden">
+          {/* ── Mensagens rápidas ───────────────── */}
+          <div className="border border-sky-200 rounded-2xl overflow-hidden">
             <button
               onClick={() => setShowFollowup(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-orange-50 hover:bg-orange-100 transition text-left"
+              className="w-full flex items-center justify-between px-4 py-3 bg-sky-50 hover:bg-sky-100 transition text-left"
             >
               <div className="flex items-center gap-2">
-                <Send size={15} className="text-orange-500" />
-                <span className="text-sm font-bold text-orange-700">Follow-up Automático</span>
-                <span className="text-xs bg-orange-200 text-orange-700 font-bold px-2 py-0.5 rounded-full">UAZAPI</span>
+                <Send size={15} className="text-sky-500" />
+                <span className="text-sm font-bold text-sky-700">Mensagens Rápidas</span>
+                <span className="text-xs bg-sky-200 text-sky-700 font-bold px-2 py-0.5 rounded-full">WhatsApp</span>
               </div>
               {showFollowup
-                ? <ChevronUp size={16} className="text-orange-400" />
-                : <ChevronDown size={16} className="text-orange-400" />
+                ? <ChevronUp size={16} className="text-sky-400" />
+                : <ChevronDown size={16} className="text-sky-400" />
               }
             </button>
 
@@ -132,7 +132,7 @@ export default function LeadModal({
                     key={tpl.key}
                     onClick={() => handleFollowUp(tpl.key)}
                     disabled={!!sending}
-                    className="w-full flex items-center justify-between px-3.5 py-3 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 rounded-xl text-left transition disabled:opacity-50"
+                    className="w-full flex items-center justify-between px-3.5 py-3 bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-200 rounded-xl text-left transition disabled:opacity-50"
                   >
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{tpl.label}</p>
@@ -176,19 +176,11 @@ export default function LeadModal({
             </select>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Anotações</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4}
-              placeholder="Preferências, objeções, próximo passo..."
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
-          </div>
-
           {/* Message history */}
-          {messages.length > 0 && (
+          {messages.length > 0 ? (
             <div>
               <p className="text-sm font-semibold text-slate-700 mb-3">Histórico da Conversa</p>
-              <div className="space-y-2 max-h-52 overflow-y-auto">
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
                 {messages.map(m => (
                   <div key={m.id} className={`flex ${m.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}>
                     <div className={`max-w-xs px-3.5 py-2.5 rounded-2xl text-sm ${
@@ -205,14 +197,20 @@ export default function LeadModal({
                 ))}
               </div>
             </div>
-          )}
-
-          {messages.length === 0 && lead.first_message && (
+          ) : lead.first_message ? (
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
               <p className="text-xs font-semibold text-slate-400 mb-1">Primeira mensagem</p>
               <p className="text-sm text-slate-700">{lead.first_message}</p>
             </div>
-          )}
+          ) : null}
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Anotações</label>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+              placeholder="Preferências, objeções, próximo passo..."
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
+          </div>
         </div>
 
         {/* Footer */}

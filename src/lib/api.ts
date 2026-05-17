@@ -4,6 +4,7 @@ export const STAGES = [
   { key: 'novo_lead',        label: 'Novo Lead',        color: 'bg-green-400/15 text-green-300',    headerBg: '#16a34a', cardBorder: '#22c55e' },
   { key: 'em_contato',       label: 'Em Contato',       color: 'bg-sky-400/15 text-sky-300',        headerBg: '#0284c7', cardBorder: '#38bdf8' },
   { key: 'interessado',      label: 'Interessado',      color: 'bg-amber-400/15 text-amber-300',    headerBg: '#d97706', cardBorder: '#fbbf24' },
+  { key: 'acompanhamento',   label: 'Acompanhamento',   color: 'bg-pink-400/15 text-pink-300',      headerBg: '#be185d', cardBorder: '#f472b6' },
   { key: 'proposta_enviada', label: 'Proposta',         color: 'bg-purple-400/15 text-purple-300',  headerBg: '#7c3aed', cardBorder: '#a78bfa' },
   { key: 'negociando',       label: 'Negociando',       color: 'bg-orange-400/15 text-orange-300',  headerBg: '#ea580c', cardBorder: '#fb923c' },
   { key: 'fechado',          label: 'Visita Agendada',  color: 'bg-emerald-400/15 text-emerald-300', headerBg: '#059669', cardBorder: '#34d399' },
@@ -24,38 +25,33 @@ export const FOLLOWUP_TEMPLATES = [
   },
   {
     key: 'followup_1',
-    label: '🔔 Follow-up 1',
-    description: 'Desperta interesse',
+    label: '🔔 Lembrete 1',
+    description: 'Check-in gentil',
     message: (name: string) =>
-      `Oi ${name}! 😊 Passando pra ver se você ainda está procurando um colchão.\n\n` +
-      `Tenho algumas novidades incríveis pra te mostrar:\n` +
-      `🛏️ Colchões a partir de R$499 com qualidade premium\n` +
-      `🎁 Brinde especial pra quem fechar essa semana\n` +
+      `Oi ${name}! 😊 Passando pra saber se você ainda está procurando um colchão.\n\n` +
+      `Temos ótimas opções com qualidade e preço justo:\n` +
+      `🛏️ Colchões a partir de R$499\n` +
       `💳 Até 12x sem juros no cartão\n\n` +
-      `Quando você pode passar na loja? Ou prefere eu mandar as fotos aqui? 👇`,
+      `Posso te mandar algumas fotos e preços por aqui, se quiser! 👇`,
   },
   {
     key: 'followup_2',
-    label: '⚠️ Follow-up 2',
-    description: 'Cria urgência',
+    label: '💬 Lembrete 2',
+    description: 'Reabertura de contato',
     message: (name: string) =>
-      `${name}, boa tarde! ☀️\n\n` +
-      `⚠️ *ATENÇÃO:* A promoção que separei pra você *expira AMANHÃ!*\n\n` +
-      `Depois disso o preço volta ao normal e não consigo garantir mais esse desconto. 😟\n\n` +
-      `Me chama aqui ou passa na loja ainda hoje — é rapidinho! 🙏`,
+      `Oi ${name}, tudo bem? 😊\n\n` +
+      `Queria saber se você já encontrou o que estava procurando ou se posso te ajudar com mais informações sobre os nossos colchões.\n\n` +
+      `Estou à disposição, pode me chamar! 🙏`,
   },
   {
     key: 'followup_3',
-    label: '🔥 Última Chance',
-    description: 'Máxima pressão',
+    label: '📋 Encerramento',
+    description: 'Último contato antes de arquivar',
     message: (name: string) =>
-      `${name}, vou ser bem direto com você:\n\n` +
-      `✅ Tenho o colchão que você quer\n` +
-      `✅ Tenho o preço que cabe no seu bolso\n` +
-      `✅ Parcelas que não pesam no bolso\n\n` +
-      `Mas só consigo garantir esse preço *até hoje às 18h*. ⏰\n\n` +
-      `Depois disso tem outro cliente reservando o mesmo modelo. Você quer ou passo para o próximo? 🤷‍♂️\n\n` +
-      `Me fala! 👇`,
+      `Oi ${name}! 👋\n\n` +
+      `Passei só pra dizer que fico por aqui quando precisar.\n\n` +
+      `Quando quiser ver nossas opções de colchões, pode me chamar a qualquer momento. 😊\n\n` +
+      `Abraços!`,
   },
 ];
 

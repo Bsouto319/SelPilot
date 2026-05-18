@@ -53,7 +53,12 @@ export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]
                 const idleHours   = minutesSince(lastMsg) / 60;
                 const semAtend    = !['fechado','perdido'].includes(lead.stage) && idleHours >= 2;
                 const emAtend     = lead.vendedor_ativo_at && minutesSince(lead.vendedor_ativo_at) < 15;
-                const semResposta = lead.unanswered_since_at && minutesSince(lead.unanswered_since_at) >= 30 && !['fechado','perdido'].includes(lead.stage);
+                // handoff pendente: BIA mandou pra humano mas nenhum vendedor respondeu depois disso
+                const handoffPendente = lead.handoff_at && minutesSince(lead.handoff_at) >= 3 &&
+                  (!lead.vendedor_ativo_at || new Date(lead.vendedor_ativo_at) < new Date(lead.handoff_at));
+                const semResposta = !['fechado','perdido'].includes(lead.stage) && !emAtend && (
+                  (lead.unanswered_since_at && minutesSince(lead.unanswered_since_at) >= 30) || handoffPendente
+                );
                 const biaAtiva    = lead.last_outbound_by === 'bia' && !['fechado','perdido'].includes(lead.stage) && minutesSince(lastMsg) < 120 && !emAtend;
                 const rawName = lead.name || lead.whatsapp_name;
                 const displayName = rawName || `+${lead.phone}`;
@@ -106,15 +111,6 @@ export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]
 
                     {/* Phone */}
                     <p className="text-xs text-white/40 font-semibold mb-1.5">+{lead.phone}</p>
-
-                    {/* Summary or first message */}
-                    {lead.summary ? (
-                      <p className="text-xs leading-relaxed line-clamp-2 mb-2" style={{ color: stage.cardBorder + 'cc' }}>
-                        🤖 {lead.summary}
-                      </p>
-                    ) : lead.first_message ? (
-                      <p className="text-xs text-white/40 line-clamp-2 mb-2">{lead.first_message}</p>
-                    ) : <div className="mb-2" />}
 
                     {/* Bottom: linha 1 — vendedor + ícones + IA toggle */}
                     <div className="flex items-center justify-between mt-1.5 gap-1">

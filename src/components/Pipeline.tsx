@@ -7,23 +7,30 @@ function minutesSince(d: string) {
 function formatTime(d: string) {
   const date = new Date(d);
   const now  = new Date();
+  const hm   = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const isToday = date.toDateString() === now.toDateString();
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
   const isYest  = date.toDateString() === yesterday.toDateString();
-  if (isToday) return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  if (isYest)  return `Ontem`;
-  return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+  if (isToday) return `Hoje ${hm}`;
+  if (isYest)  return `Ontem ${hm}`;
+  return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${hm}`;
 }
 
 export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]; onSelect: (l: any) => void; onToggleAi: (id: string, newMode: boolean) => void }) {
-  const byStage = (key: string) => leads.filter(l => l.stage === key);
+  const byStage = (key: string) => leads
+    .filter(l => l.stage === key)
+    .sort((a, b) => {
+      const at = new Date(a.last_message_at ?? a.created_at).getTime();
+      const bt = new Date(b.last_message_at ?? b.created_at).getTime();
+      return bt - at; // mais recente no topo
+    });
 
   return (
     <div className="flex gap-2.5 h-full overflow-x-auto pb-2 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-white/5 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
       {STAGES.map(stage => {
         const items = byStage(stage.key);
         return (
-          <div key={stage.key} className="flex-shrink-0 flex flex-col rounded-xl overflow-hidden" style={{ width: 'calc((100vw - 96px - 24px) / 7)' }}>
+          <div key={stage.key} className="flex-shrink-0 flex flex-col rounded-xl overflow-hidden" style={{ width: 'calc((100vw - 96px - 24px) / 8)' }}>
 
             {/* Column header — full-width colored band */}
             <div
@@ -41,22 +48,28 @@ export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]
             {/* Cards area */}
             <div className="flex-1 overflow-y-auto space-y-2 p-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full" style={{ background: 'rgba(10,20,55,0.5)' }}>
               {items.map(lead => {
-                const isNew     = minutesSince(lead.created_at) < 60;
-                const lastMsg   = lead.last_message_at ?? lead.created_at;
-                const idleHours = minutesSince(lastMsg) / 60;
-                const semAtend  = !['fechado','perdido'].includes(lead.stage) && idleHours >= 2;
+                const isNew       = minutesSince(lead.created_at) < 60;
+                const lastMsg     = lead.last_message_at ?? lead.created_at;
+                const idleHours   = minutesSince(lastMsg) / 60;
+                const semAtend    = !['fechado','perdido'].includes(lead.stage) && idleHours >= 2;
+                const emAtend     = lead.vendedor_ativo_at && minutesSince(lead.vendedor_ativo_at) < 15;
+                const semResposta = lead.unanswered_since_at && minutesSince(lead.unanswered_since_at) >= 30 && !['fechado','perdido'].includes(lead.stage);
+                const biaAtiva    = lead.last_outbound_by === 'bia' && !['fechado','perdido'].includes(lead.stage) && minutesSince(lastMsg) < 120 && !emAtend;
                 const rawName = lead.name || lead.whatsapp_name;
                 const displayName = rawName || `+${lead.phone}`;
                 return (
+                  <div key={lead.id} className="relative rounded-lg overflow-hidden">
+                    {biaAtiva && (
+                      <div className="absolute inset-0 border border-violet-400/50 animate-ping pointer-events-none" style={{ animationDuration: '2.5s' }} />
+                    )}
                   <button
-                    key={lead.id}
                     onClick={() => onSelect(lead)}
                     className="w-full text-left rounded-lg transition-all duration-150 p-3 group border hover:border-white/25"
                     style={{
-                      background: semAtend ? 'rgba(220,30,30,0.08)' : 'rgba(15,28,60,0.85)',
-                      borderColor: semAtend ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.08)',
+                      background: semResposta ? 'rgba(234,88,12,0.10)' : semAtend ? 'rgba(220,30,30,0.08)' : biaAtiva ? 'rgba(109,40,217,0.08)' : 'rgba(15,28,60,0.85)',
+                      borderColor: semResposta ? 'rgba(251,146,60,0.45)' : semAtend ? 'rgba(239,68,68,0.35)' : biaAtiva ? 'rgba(167,139,250,0.35)' : 'rgba(255,255,255,0.08)',
                       borderLeftWidth: 3,
-                      borderLeftColor: semAtend ? '#ef4444' : stage.cardBorder,
+                      borderLeftColor: semResposta ? '#f97316' : semAtend ? '#ef4444' : biaAtiva ? '#a78bfa' : stage.cardBorder,
                     }}
                   >
                     {/* Name row */}
@@ -74,6 +87,21 @@ export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]
                           SEM RETORNO
                         </span>
                       )}
+                      {emAtend && (
+                        <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 animate-pulse">
+                          💬 ATENDENDO
+                        </span>
+                      )}
+                      {semResposta && !emAtend && (
+                        <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-500/25 text-orange-300 border border-orange-500/50 animate-pulse">
+                          ❓ RESPONDER
+                        </span>
+                      )}
+                      {biaAtiva && !semResposta && !emAtend && !isNew && (
+                        <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-violet-500/25 text-violet-300 border border-violet-500/50 animate-pulse">
+                          👁 VER
+                        </span>
+                      )}
                     </div>
 
                     {/* Phone */}
@@ -88,47 +116,59 @@ export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]
                       <p className="text-xs text-white/40 line-clamp-2 mb-2">{lead.first_message}</p>
                     ) : <div className="mb-2" />}
 
-                    {/* Bottom row: vendedor + score + time + IA toggle */}
-                    <div className="flex items-center justify-between mt-1">
-                      {/* Vendedor + nota fiscal */}
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-sm shrink-0">
-                          <span className="text-white font-black text-[9px]">{(lead.vendedor?.nome ?? 'S')[0].toUpperCase()}</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-emerald-400/70">{lead.vendedor?.nome ?? 'Sem vendedor'}</span>
-                        {lead.needs_invoice && (
-                          <span className="text-[9px] font-black px-1 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30" title="Cliente solicitou nota fiscal">🧾</span>
+                    {/* Bottom: linha 1 — vendedor + ícones + IA toggle */}
+                    <div className="flex items-center justify-between mt-1.5 gap-1">
+                      <div className="flex items-center gap-1 min-w-0">
+                        {lead.last_outbound_by === 'bia' ? (
+                          <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">🤖 BIA</span>
+                        ) : (
+                          <>
+                            <div className="w-4 h-4 rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shrink-0">
+                              <span className="text-white font-black text-[8px]">{(lead.vendedor?.nome ?? 'S')[0].toUpperCase()}</span>
+                            </div>
+                            <span className="text-[9px] font-bold text-emerald-400/80 truncate">{lead.vendedor?.nome ?? 'Sem vendedor'}</span>
+                          </>
                         )}
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-[10px] font-bold ${semAtend ? 'text-red-400' : 'text-white/25'}`}>
-                          {semAtend ? '⚠ ' : ''}{formatTime(lastMsg)}
-                        </span>
-                        {lead.score != null && (
-                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full" style={{
-                            backgroundColor: lead.score >= 70 ? '#22c55e22' : lead.score >= 40 ? '#f59e0b22' : '#ef444422',
-                            color:           lead.score >= 70 ? '#4ade80'   : lead.score >= 40 ? '#fbbf24'   : '#f87171',
-                          }}>
-                            {lead.score}%
+                        {lead.needs_invoice && (
+                          <span className="shrink-0 text-[9px] font-black px-1 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30" title="Cliente solicitou nota fiscal">🧾</span>
+                        )}
+                        {(lead.followup_count ?? 0) > 0 && (
+                          <span className="shrink-0 text-[9px] font-black px-1 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30" title={`${lead.followup_count} follow-up(s) enviado(s)`}>
+                            📬 {lead.followup_count}x
                           </span>
                         )}
-                        {!['fechado','perdido'].includes(lead.stage) && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onToggleAi(lead.id, !lead.ai_mode); }}
-                            title={lead.ai_mode ? 'IA ligada — clique para desligar' : 'IA desligada — clique para ligar'}
-                            className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border transition-all ${
-                              lead.ai_mode
-                                ? 'bg-violet-500/25 text-violet-300 border-violet-500/50 shadow-sm shadow-violet-500/20'
-                                : 'bg-white/10 text-white/50 border-white/25'
-                            }`}
-                          >
-                            🤖 {lead.ai_mode ? 'ON' : 'OFF'}
-                          </button>
-                        )}
                       </div>
+                      {!['fechado','perdido'].includes(lead.stage) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onToggleAi(lead.id, !lead.ai_mode); }}
+                          title={lead.ai_mode ? 'IA ligada — clique para desligar' : 'IA desligada — clique para ligar'}
+                          className={`shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full border transition-all ${
+                            lead.ai_mode
+                              ? 'bg-violet-500/25 text-violet-300 border-violet-500/50 shadow-sm shadow-violet-500/20'
+                              : 'bg-white/10 text-white/50 border-white/25'
+                          }`}
+                        >
+                          🤖 {lead.ai_mode ? 'ON' : 'OFF'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Bottom: linha 2 — data+hora | score */}
+                    <div className="flex items-center justify-between mt-1 gap-1">
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md truncate ${semAtend ? 'text-red-300 bg-red-500/15' : 'text-white/60 bg-white/6'}`}>
+                        {semAtend ? '⚠ ' : ''}{formatTime(lastMsg)}
+                      </span>
+                      {lead.score != null && (
+                        <span className="shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-full" style={{
+                          backgroundColor: lead.score >= 70 ? '#22c55e22' : lead.score >= 40 ? '#f59e0b22' : '#ef444422',
+                          color:           lead.score >= 70 ? '#4ade80'   : lead.score >= 40 ? '#fbbf24'   : '#f87171',
+                        }}>
+                          {lead.score}%
+                        </span>
+                      )}
                     </div>
                   </button>
+                  </div>
                 );
               })}
 

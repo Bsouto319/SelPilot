@@ -13,8 +13,9 @@ export default function ConnectionStatus() {
     try {
       const res  = await fetch(`${SUPABASE_URL}/functions/v1/sellpilot-health`);
       const data = await res.json();
-      setStatus(data.connected && data.loggedIn ? 'connected' : 'disconnected');
-      setLastCheck(data.lastCheck ?? null);
+      const isConnected = data.connected ?? data.ok ?? false;
+      setStatus(isConnected ? 'connected' : 'disconnected');
+      setLastCheck(data.lastCheck ?? new Date().toISOString());
     } catch {
       setStatus('disconnected');
     }

@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText } from 'lucide-react';
 import Pipeline from './components/Pipeline';
-import MobileLeadList from './components/MobileLeadList';
 import LeadModal from './components/LeadModal';
 import ReportModal from './components/ReportModal';
 import ConnectionStatus from './components/ConnectionStatus';
@@ -18,9 +17,41 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [biaActive, setBiaActive] = useState(false);
   const [biaLoading, setBiaLoading] = useState(false);
+  const [newLeadAlert, setNewLeadAlert] = useState(false);
+  const [newMsgAlert, setNewMsgAlert]   = useState(false);
 
   const searchRef = useRef(search);
   searchRef.current = search;
+
+  function playNewLeadSound() {
+    try {
+      const ctx = new AudioContext();
+      ([[ 880, 0, 0.15 ], [ 1100, 0.18, 0.15 ]] as [number,number,number][]).forEach(([freq, start, dur]) => {
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq; osc.type = 'sine';
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        osc.start(ctx.currentTime + start); osc.stop(ctx.currentTime + start + dur);
+      });
+      setTimeout(() => ctx.close(), 1000);
+    } catch { /* AudioContext not available */ }
+  }
+
+  function playNewMessageSound() {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(660, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.25);
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
+      setTimeout(() => ctx.close(), 500);
+    } catch { /* AudioContext not available */ }
+  }
 
   const load = useCallback(async (q?: string) => {
     const query = q !== undefined ? q : searchRef.current;
@@ -36,13 +67,31 @@ export default function App() {
     fetchBiaGlobalMode().then(setBiaActive);
   }, []);
 
-  // Realtime — atualiza ao mudar qualquer lead
+  // Realtime — beep e badge em novo lead; beep em mensagem recebida
   useEffect(() => {
-    const channel = supabase
+    const leadsChannel = supabase
       .channel('sp_leads_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sp_leads' }, () => load())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sp_leads' }, () => {
+        playNewLeadSound();
+        setNewLeadAlert(true);
+        load();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sp_leads' }, () => load())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sp_leads' }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    const msgsChannel = supabase
+      .channel('sp_messages_rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sp_messages' }, (payload: any) => {
+        if (payload.new?.direction === 'inbound') {
+          playNewMessageSound();
+          setNewMsgAlert(true);
+        }
+        load();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(leadsChannel); supabase.removeChannel(msgsChannel); };
   }, [load]);
 
   async function handleToggleBiaGlobal() {
@@ -194,13 +243,9 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* Desktop: kanban */}
-            <div className="hidden sm:block h-full px-6 pb-6">
+            {/* Kanban sempre visível — scroll horizontal em telas pequenas */}
+            <div className="block h-full px-6 pb-6">
               <Pipeline leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} />
-            </div>
-            {/* Mobile: lista vertical */}
-            <div className="sm:hidden h-full overflow-y-auto">
-              <MobileLeadList leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} />
             </div>
           </>
         )}
@@ -217,6 +262,34 @@ export default function App() {
 
       {/* ── Report Modal ─────────────────────────────────────────── */}
       {showReport && <ReportModal onClose={() => setShowReport(false)} />}
+
+      {/* ── Alertas flutuantes ───────────────────────────────────── */}
+      {(newLeadAlert || newMsgAlert) && (
+        <div className="fixed bottom-5 right-5 flex flex-col gap-2 z-50">
+          {newLeadAlert && (
+            <button
+              onClick={() => setNewLeadAlert(false)}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-black text-white shadow-2xl border border-green-500/40 animate-pulse"
+              style={{ background: 'rgba(16,100,50,0.95)', backdropFilter: 'blur(12px)' }}
+            >
+              <span className="text-base">🟢</span>
+              <span>Novo Lead chegou!</span>
+              <span className="text-white/50 text-xs font-bold ml-1">×</span>
+            </button>
+          )}
+          {newMsgAlert && (
+            <button
+              onClick={() => setNewMsgAlert(false)}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-black text-white shadow-2xl border border-amber-500/40 animate-pulse"
+              style={{ background: 'rgba(120,80,0,0.95)', backdropFilter: 'blur(12px)' }}
+            >
+              <span className="text-base">💬</span>
+              <span>Nova mensagem!</span>
+              <span className="text-white/50 text-xs font-bold ml-1">×</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

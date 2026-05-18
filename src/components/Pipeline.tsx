@@ -109,8 +109,8 @@ export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]
                       )}
                     </div>
 
-                    {/* Phone */}
-                    <p className="text-xs text-white/40 font-semibold mb-1.5">+{lead.phone}</p>
+                    {/* Phone — só mostra se já tem nome real, senão o número já aparece como nome */}
+                    {rawName && <p className="text-xs text-white/40 font-semibold mb-1.5">+{lead.phone}</p>}
 
                     {/* Bottom: linha 1 — vendedor + ícones + IA toggle */}
                     <div className="flex items-center justify-between mt-1.5 gap-1">

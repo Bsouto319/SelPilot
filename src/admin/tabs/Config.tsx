@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Save, Bot, Phone, Zap, RefreshCw } from 'lucide-react';
+import { Save, Bot, Phone, Zap, RefreshCw, Star } from 'lucide-react';
 import { fetchConfig, setConfig } from '../../lib/adminApi';
 import { supabase } from '../../lib/supabase';
 
@@ -12,16 +12,30 @@ export default function Config() {
   const [saving, setSaving]          = useState(false);
   const [toast, setToast]            = useState('');
 
+  // Links Google Review por loja
+  const [linkNacional, setLinkNacional]     = useState('');
+  const [linkCasaPark, setLinkCasaPark]     = useState('');
+  const [linkShoppingId, setLinkShoppingId] = useState('');
+  const [linkProdormir, setLinkProdormir]   = useState('');
+
   async function load() {
     setLoading(true);
-    const [bia, fb, fin] = await Promise.all([
+    const [bia, fb, fin, gNac, gCasa, gShop, gPro] = await Promise.all([
       fetchConfig('bia_global_mode'),
       fetchConfig('fallback_phone'),
       fetchConfig('financeiro_phone'),
+      fetchConfig('google_review_nacional'),
+      fetchConfig('google_review_casapark'),
+      fetchConfig('google_review_shoppingid'),
+      fetchConfig('google_review_prodormir'),
     ]);
     setBiaGlobal(bia === 'true');
     setFallback(fb || '');
     setFinPhone(fin || '');
+    setLinkNacional(gNac || '');
+    setLinkCasaPark(gCasa || '');
+    setLinkShoppingId(gShop || '');
+    setLinkProdormir(gPro || '');
     setLoading(false);
   }
 
@@ -152,6 +166,52 @@ export default function Config() {
             <RefreshCw size={14} /> Disparar Poll
           </button>
           {pollStatus && <p className="text-white/50 text-xs font-mono">{pollStatus}</p>}
+        </div>
+      </div>
+
+      {/* Google Review Links */}
+      <div className="rounded-2xl border border-white/10 p-5" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-amber-600/30 flex items-center justify-center">
+            <Star size={18} className="text-amber-300" />
+          </div>
+          <div>
+            <p className="text-white font-bold text-sm">Links Google Review (Pós-Venda)</p>
+            <p className="text-white/30 text-xs">BIA envia automaticamente após fechamento de venda</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {[
+            { label: 'Probel Conjunto Nacional', val: linkNacional, set: setLinkNacional },
+            { label: 'Probel Casa Park', val: linkCasaPark, set: setLinkCasaPark },
+            { label: 'Probel Shopping ID', val: linkShoppingId, set: setLinkShoppingId },
+            { label: 'Prodormir', val: linkProdormir, set: setLinkProdormir },
+          ].map(({ label, val, set }) => (
+            <div key={label}>
+              <label className="text-white/50 text-xs font-bold mb-1 block">{label}</label>
+              <input value={val} onChange={e => set(e.target.value)}
+                placeholder="https://g.page/r/..." className={INPUT} />
+            </div>
+          ))}
+          <p className="text-white/20 text-[11px] mt-1">
+            💡 O poll usa o primeiro link preenchido como padrão. Para múltiplas lojas, configure todos.
+          </p>
+          <button
+            onClick={async () => {
+              setSaving(true);
+              await Promise.all([
+                setConfig('google_review_nacional', linkNacional),
+                setConfig('google_review_casapark', linkCasaPark),
+                setConfig('google_review_shoppingid', linkShoppingId),
+                setConfig('google_review_prodormir', linkProdormir),
+              ]);
+              showToast('Links salvos!');
+              setSaving(false);
+            }}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold transition disabled:opacity-60">
+            <Save size={14} /> Salvar Links Google
+          </button>
         </div>
       </div>
 

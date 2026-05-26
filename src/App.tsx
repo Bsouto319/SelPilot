@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText, CalendarDays, Volume2, VolumeX, ShieldCheck } from 'lucide-react';
+import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText, CalendarDays, Volume2, VolumeX, ShieldCheck, Star } from 'lucide-react';
 import Pipeline from './components/Pipeline';
+import PostVenda from './components/PostVenda';
 import LeadModal from './components/LeadModal';
 import ReportModal from './components/ReportModal';
 import ConnectionStatus from './components/ConnectionStatus';
@@ -23,6 +24,7 @@ export default function App() {
   const [dayFilter, setDayFilter] = useState<string | null>(null);
   const [muted, setMuted] = useState(() => localStorage.getItem('sp_sound_muted') === 'true');
   const [showAdmin, setShowAdmin] = useState(false);
+  const [view, setView]           = useState<'kanban' | 'posvenda'>('kanban');
 
   const searchRef = useRef(search);
   searchRef.current = search;
@@ -266,8 +268,32 @@ export default function App() {
         ))}
       </div>
 
+      {/* ── View tabs ───────────────────────────────────────────── */}
+      <div className="flex-shrink-0 px-4 sm:px-6 pt-1 pb-2 flex items-center gap-2">
+        <button
+          onClick={() => setView('kanban')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-black border transition-all ${
+            view === 'kanban'
+              ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20'
+              : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:bg-white/8'
+          }`}
+        >
+          <BarChart3 size={12} /> CRM
+        </button>
+        <button
+          onClick={() => setView('posvenda')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-black border transition-all ${
+            view === 'posvenda'
+              ? 'bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/20'
+              : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:bg-white/8'
+          }`}
+        >
+          <Star size={12} /> Pós-Venda
+        </button>
+      </div>
+
       {/* ── Filtro por dia ───────────────────────────────────────── */}
-      {(() => {
+      {view === 'kanban' && (() => {
         const today = new Date();
         const fmt = (d: Date) => {
           const y = d.getFullYear();
@@ -320,19 +346,20 @@ export default function App() {
         );
       })()}
 
-      {/* ── Pipeline (desktop) / Lista (mobile) ─────────────────── */}
+      {/* ── Pipeline / Pós-Venda ─────────────────────────────────── */}
       <main className="flex-1 overflow-hidden min-h-0">
-        {loading ? (
+        {view === 'posvenda' ? (
+          <div className="h-full px-4 sm:px-6 pb-6 overflow-y-auto">
+            <PostVenda />
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center h-full text-white/30 text-sm">
             Carregando leads...
           </div>
         ) : (
-          <>
-            {/* Kanban sempre visível — scroll horizontal em telas pequenas */}
-            <div className="block h-full px-6 pb-6">
-              <Pipeline leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} dayFilter={dayFilter} />
-            </div>
-          </>
+          <div className="block h-full px-6 pb-6">
+            <Pipeline leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} dayFilter={dayFilter} />
+          </div>
         )}
       </main>
 

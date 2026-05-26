@@ -11,6 +11,7 @@ import Config   from './tabs/Config';
 import Support  from './tabs/Support';
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
+const ADMIN_EMAIL    = 'brunosouto1108@gmail.com';
 const ADMIN_PASSWORD = 'sellpilot2025';
 const AUTH_KEY       = 'sp_admin_auth';
 
@@ -25,20 +26,26 @@ const TABS = [
 
 export default function AdminApp({ onExit }: { onExit?: () => void } = {}) {
   const [authed, setAuthed]     = useState(() => sessionStorage.getItem(AUTH_KEY) === '1');
+  const [email, setEmail]       = useState('');
   const [pwd, setPwd]           = useState('');
-  const [err, setErr]           = useState(false);
+  const [err, setErr]           = useState('');
   const [tab, setTab]           = useState('overview');
   const [sideOpen, setSideOpen] = useState(false);
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (pwd === ADMIN_PASSWORD) {
-      sessionStorage.setItem(AUTH_KEY, '1');
-      setAuthed(true);
-    } else {
-      setErr(true);
-      setTimeout(() => setErr(false), 2000);
+    if (email.trim().toLowerCase() !== ADMIN_EMAIL) {
+      setErr('Email não autorizado');
+      setTimeout(() => setErr(''), 2500);
+      return;
     }
+    if (pwd !== ADMIN_PASSWORD) {
+      setErr('Senha incorreta');
+      setTimeout(() => setErr(''), 2500);
+      return;
+    }
+    sessionStorage.setItem(AUTH_KEY, '1');
+    setAuthed(true);
   }
 
   function logout() {
@@ -60,16 +67,25 @@ export default function AdminApp({ onExit }: { onExit?: () => void } = {}) {
           </div>
           <form onSubmit={handleLogin} className="space-y-3">
             <input
-              type="password"
-              value={pwd}
-              onChange={e => { setPwd(e.target.value); setErr(false); }}
-              placeholder="Senha de administrador"
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setErr(''); }}
+              placeholder="Seu e-mail de admin"
               autoFocus
               className={`w-full px-4 py-3.5 rounded-2xl bg-white/5 border text-white text-sm placeholder-white/25
                 focus:outline-none focus:ring-2 focus:ring-violet-500 transition
                 ${err ? 'border-red-500' : 'border-white/10'}`}
             />
-            {err && <p className="text-red-400 text-xs text-center font-semibold">Senha incorreta</p>}
+            <input
+              type="password"
+              value={pwd}
+              onChange={e => { setPwd(e.target.value); setErr(''); }}
+              placeholder="Senha de administrador"
+              className={`w-full px-4 py-3.5 rounded-2xl bg-white/5 border text-white text-sm placeholder-white/25
+                focus:outline-none focus:ring-2 focus:ring-violet-500 transition
+                ${err ? 'border-red-500' : 'border-white/10'}`}
+            />
+            {err && <p className="text-red-400 text-xs text-center font-semibold">{err}</p>}
             <button
               type="submit"
               className="w-full py-3.5 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition shadow-xl shadow-violet-500/30"

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText } from 'lucide-react';
+import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText, CalendarDays, Volume2, VolumeX } from 'lucide-react';
 import Pipeline from './components/Pipeline';
 import LeadModal from './components/LeadModal';
 import ReportModal from './components/ReportModal';
@@ -19,11 +19,16 @@ export default function App() {
   const [biaLoading, setBiaLoading] = useState(false);
   const [newLeadAlert, setNewLeadAlert] = useState(false);
   const [newMsgAlert, setNewMsgAlert]   = useState(false);
+  const [dayFilter, setDayFilter] = useState<string | null>(null);
+  const [muted, setMuted] = useState(() => localStorage.getItem('sp_sound_muted') === 'true');
 
   const searchRef = useRef(search);
   searchRef.current = search;
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
 
   function playNewLeadSound() {
+    if (mutedRef.current) return;
     try {
       const ctx = new AudioContext();
       ([[ 880, 0, 0.15 ], [ 1100, 0.18, 0.15 ]] as [number,number,number][]).forEach(([freq, start, dur]) => {
@@ -39,6 +44,7 @@ export default function App() {
   }
 
   function playNewMessageSound() {
+    if (mutedRef.current) return;
     try {
       const ctx = new AudioContext();
       const osc = ctx.createOscillator(); const gain = ctx.createGain();
@@ -91,7 +97,14 @@ export default function App() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(leadsChannel); supabase.removeChannel(msgsChannel); };
+    // Fallback: atualiza a cada 15s caso o Realtime caia
+    const fallbackId = setInterval(() => load(), 15_000);
+
+    return () => {
+      supabase.removeChannel(leadsChannel);
+      supabase.removeChannel(msgsChannel);
+      clearInterval(fallbackId);
+    };
   }, [load]);
 
   async function handleToggleBiaGlobal() {
@@ -190,6 +203,13 @@ export default function App() {
               <span className="hidden sm:inline">Relatório</span>
             </button>
             <button
+              onClick={() => setMuted(m => { const next = !m; localStorage.setItem('sp_sound_muted', next ? 'true' : 'false'); return next; })}
+              title={muted ? 'Som desligado — clique para ligar' : 'Som ligado — clique para desligar'}
+              className={`p-2.5 rounded-xl border transition ${muted ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/50'}`}
+            >
+              {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            </button>
+            <button
               onClick={() => { setRefreshing(true); load(); }}
               className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition"
               title="Atualizar"
@@ -235,6 +255,60 @@ export default function App() {
         ))}
       </div>
 
+      {/* ── Filtro por dia ───────────────────────────────────────── */}
+      {(() => {
+        const today = new Date();
+        const fmt = (d: Date) => {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const da = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${da}`;
+        };
+        const todayStr = fmt(today);
+        const yest = new Date(today); yest.setDate(today.getDate() - 1);
+        const yesterdayStr = fmt(yest);
+        const filteredCount = dayFilter ? leads.filter(l => {
+          const ref = l.last_message_at ?? l.created_at;
+          const d = new Date(ref);
+          const s = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          return s === dayFilter;
+        }).length : leads.length;
+
+        return (
+          <div className="flex-shrink-0 px-6 pb-2 flex items-center gap-2 flex-wrap">
+            <CalendarDays size={14} className="text-white/30" />
+            {[
+              { label: 'Todos', value: null },
+              { label: 'Hoje', value: todayStr },
+              { label: 'Ontem', value: yesterdayStr },
+            ].map(opt => (
+              <button
+                key={opt.label}
+                onClick={() => setDayFilter(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${
+                  dayFilter === opt.value
+                    ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <input
+              type="date"
+              value={dayFilter && dayFilter !== (() => { const t=new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; })() ? dayFilter : ''}
+              onChange={e => setDayFilter(e.target.value || null)}
+              className="px-2 py-1.5 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-white/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 [color-scheme:dark] cursor-pointer"
+            />
+            {dayFilter && (
+              <span className="text-xs font-bold text-white/40 ml-1">
+                {filteredCount} lead{filteredCount !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── Pipeline (desktop) / Lista (mobile) ─────────────────── */}
       <main className="flex-1 overflow-hidden min-h-0">
         {loading ? (
@@ -245,7 +319,7 @@ export default function App() {
           <>
             {/* Kanban sempre visível — scroll horizontal em telas pequenas */}
             <div className="block h-full px-6 pb-6">
-              <Pipeline leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} />
+              <Pipeline leads={leads} onSelect={setSelected} onToggleAi={handleToggleAi} dayFilter={dayFilter} />
             </div>
           </>
         )}

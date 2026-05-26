@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react';
-import { X, Phone, MessageCircle, Save, Trash2, Send, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { X, Phone, MessageCircle, Save, Trash2, Send, ChevronDown, ChevronUp, CheckCircle, XCircle, Sparkles, Paperclip, Mic, Square, FileText, Download } from 'lucide-react';
 import {
   STAGES, FOLLOWUP_TEMPLATES,
-  fetchMessages, updateLeadStage, updateLeadNotes, deleteLead, sendFollowUp,
+  fetchMessages, updateLeadStage, updateLeadNotes, deleteLead, sendFollowUp, analyzeLeadAI,
+  sendWhatsApp, sendMediaWhatsApp, sendPttWhatsApp,
 } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 type Toast = { ok: boolean; msg: string } | null;
+
+const aiCache = new Map<string, { result: any; at: number }>();
+const CACHE_TTL = 15 * 60 * 1000;
 
 export default function LeadModal({
   lead, onClose, onUpdated,
@@ -18,16 +23,135 @@ export default function LeadModal({
   const [showFollowup, setShowFollowup] = useState(false);
   const [sending, setSending]       = useState<string | null>(null);
   const [toast, setToast]           = useState<Toast>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [aiLoading, setAiLoading]   = useState(false);
+  const [chatText, setChatText]     = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const [recording, setRecording]   = useState(false);
+  const [recordSecs, setRecordSecs] = useState(0);
+  const [audioBlob, setAudioBlob]   = useState<Blob | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [sendingMedia, setSendingMedia] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef        = useRef<Blob[]>([]);
+  const timerRef         = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInputRef     = useRef<HTMLInputElement>(null);
+  const [copied, setCopied]         = useState(false);
+  const [showSuggestion, setShowSuggestion] = useState(false);
 
-  useEffect(() => {
+  const refreshMessages = useCallback(() => {
     fetchMessages(lead.id).then(setMessages);
   }, [lead.id]);
+
+  useEffect(() => {
+    refreshMessages();
+
+    // Realtime: atualiza conversa quando nova mensagem chega no lead aberto
+    const ch = supabase
+      .channel(`sp_msgs_modal_${lead.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'sp_messages',
+        filter: `lead_id=eq.${lead.id}`,
+      }, () => refreshMessages())
+      .subscribe();
+
+    // Fallback: atualiza a cada 8s enquanto o modal está aberto
+    const pollId = setInterval(refreshMessages, 8_000);
+
+    return () => {
+      supabase.removeChannel(ch);
+      clearInterval(pollId);
+    };
+  }, [lead.id, refreshMessages]);
+
+  // Auto-trigger análise se lead tem mensagens nas últimas 24h
+  useEffect(() => {
+    if (!lead.last_message_at) return;
+    const mins = Math.floor((Date.now() - new Date(lead.last_message_at).getTime()) / 60000);
+    if (mins < 1440) {
+      const t = setTimeout(() => handleAnalyze(), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
     const id = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(id);
   }, [toast]);
+
+  async function handleAnalyze(force = false) {
+    const cached = aiCache.get(lead.id);
+    if (!force && cached && Date.now() - cached.at < CACHE_TTL) {
+      setAiAnalysis(cached.result);
+      return;
+    }
+    setAiLoading(true);
+    const result = await analyzeLeadAI(lead.id);
+    if (result) aiCache.set(lead.id, { result, at: Date.now() });
+    setAiAnalysis(result);
+    setAiLoading(false);
+  }
+
+  function fmtSecs(s: number) {
+    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  function fmtFileSize(b: number) {
+    if (b < 1024) return `${b} B`;
+    if (b < 1048576) return `${(b / 1024).toFixed(0)} KB`;
+    return `${(b / 1048576).toFixed(1)} MB`;
+  }
+
+  async function handleChatSend(e: React.FormEvent) {
+    e.preventDefault();
+    if (!chatText.trim() || chatSending) return;
+    setChatSending(true);
+    await sendWhatsApp(lead.phone, chatText.trim());
+    setChatText('');
+    setChatSending(false);
+    setTimeout(() => fetchMessages(lead.id).then(setMessages), 1500);
+  }
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+      const mr = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        setAudioBlob(new Blob(chunksRef.current, { type: mimeType }));
+        stream.getTracks().forEach(t => t.stop());
+        clearInterval(timerRef.current!);
+      };
+      mediaRecorderRef.current = mr;
+      mr.start(100);
+      setRecording(true);
+      setRecordSecs(0);
+      timerRef.current = setInterval(() => setRecordSecs(s => s + 1), 1000);
+    } catch { alert('Microfone não disponível ou sem permissão.'); }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }
+
+  async function handleSendMedia() {
+    if (!selectedFile && !audioBlob) return;
+    setSendingMedia(true);
+    if (audioBlob) {
+      await sendPttWhatsApp(lead.phone, audioBlob);
+      setAudioBlob(null); setRecordSecs(0);
+    } else if (selectedFile) {
+      await sendMediaWhatsApp(lead.phone, selectedFile);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+    setSendingMedia(false);
+    setTimeout(() => fetchMessages(lead.id).then(setMessages), 2000);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -60,7 +184,19 @@ export default function LeadModal({
     }
   }
 
+  function handleCopy(text: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   const displayName = lead.name || lead.whatsapp_name || 'Lead';
+
+  const urgencyStyle = {
+    alta:  { bg: 'bg-red-100',   text: 'text-red-700',   dot: '🔴' },
+    media: { bg: 'bg-amber-100', text: 'text-amber-700', dot: '🟡' },
+    baixa: { bg: 'bg-green-100', text: 'text-green-700', dot: '🟢' },
+  }[aiAnalysis?.urgencia as string] ?? { bg: 'bg-slate-100', text: 'text-slate-600', dot: '⚪' };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -107,7 +243,92 @@ export default function LeadModal({
             </a>
           </div>
 
-          {/* ── Mensagens rápidas ───────────────── */}
+          {/* ── Copiloto IA ─────────────────────────────────── */}
+          <div className="border border-violet-200 rounded-2xl overflow-hidden">
+            <button
+              onClick={() => handleAnalyze(true)}
+              disabled={aiLoading}
+              className="w-full flex items-center justify-between px-4 py-3 bg-violet-50 hover:bg-violet-100 transition text-left disabled:opacity-70"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className={`${aiLoading ? 'animate-spin' : ''} text-violet-500`} />
+                <span className="text-sm font-bold text-violet-700">Copiloto IA</span>
+                {aiLoading && <span className="text-xs text-violet-400 animate-pulse">Analisando...</span>}
+              </div>
+              {!aiLoading && (
+                <span className="text-xs font-bold text-violet-500 bg-violet-100 px-2 py-0.5 rounded-full">
+                  {aiAnalysis ? 'Reanalisar' : 'Analisar'}
+                </span>
+              )}
+            </button>
+
+            {aiAnalysis && (
+              <div className="p-4 space-y-3 border-t border-violet-100">
+                {/* Badges */}
+                <div className="flex flex-wrap gap-1.5">
+                  <span className={`text-xs font-black px-2.5 py-1 rounded-full ${urgencyStyle.bg} ${urgencyStyle.text}`}>
+                    {urgencyStyle.dot} {(aiAnalysis.urgencia ?? '').toUpperCase()}
+                  </span>
+                  {aiAnalysis.intencao && (
+                    <span className="text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-full">
+                      {aiAnalysis.intencao}
+                    </span>
+                  )}
+                  {aiAnalysis.stage_sugerido && aiAnalysis.stage_sugerido !== lead.stage && (
+                    <span className="text-xs font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-2.5 py-1 rounded-full">
+                      → {STAGES.find(s => s.key === aiAnalysis.stage_sugerido)?.label ?? aiAnalysis.stage_sugerido}
+                    </span>
+                  )}
+                </div>
+
+                {/* Observação */}
+                {aiAnalysis.observacao && (
+                  <p className="text-xs text-slate-500 italic leading-relaxed">
+                    💡 {aiAnalysis.observacao}
+                  </p>
+                )}
+
+                {/* Resposta sugerida — colapsável */}
+                {aiAnalysis.resposta_sugerida && (
+                  <div className="rounded-xl border border-violet-100 overflow-hidden">
+                    <button
+                      onClick={() => setShowSuggestion(v => !v)}
+                      className="w-full flex items-center justify-between px-3 py-2 bg-violet-50 hover:bg-violet-100 transition text-left"
+                    >
+                      <span className="text-xs font-bold text-violet-600">💬 Resposta sugerida</span>
+                      {showSuggestion
+                        ? <ChevronUp size={13} className="text-violet-400" />
+                        : <ChevronDown size={13} className="text-violet-400" />}
+                    </button>
+                    {showSuggestion && (
+                      <div className="bg-white px-3 pb-3 pt-2 border-t border-violet-100">
+                        <p className="text-sm text-violet-900 whitespace-pre-wrap leading-relaxed">
+                          {aiAnalysis.resposta_sugerida}
+                        </p>
+                        <div className="flex gap-2 mt-2.5">
+                          <button
+                            onClick={() => { setChatText(aiAnalysis.resposta_sugerida); setShowSuggestion(false); }}
+                            className="flex items-center gap-1.5 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 px-2.5 py-1 rounded-lg transition"
+                          >
+                            ✏️ Usar no chat
+                          </button>
+                          <button
+                            onClick={() => handleCopy(aiAnalysis.resposta_sugerida)}
+                            className="flex items-center gap-1.5 text-xs font-bold text-violet-500 hover:text-violet-700 transition"
+                          >
+                            {copied ? <CheckCircle size={12} /> : '📋'}
+                            {copied ? 'Copiado!' : 'Copiar mensagem'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Mensagens rápidas ───────────────────────── */}
           <div className="border border-sky-200 rounded-2xl overflow-hidden">
             <button
               onClick={() => setShowFollowup(v => !v)}
@@ -148,8 +369,8 @@ export default function LeadModal({
             )}
           </div>
 
-          {/* AI Summary + Score */}
-          {lead.summary && (
+          {/* AI Summary legado — só mostra se ainda não há análise nova */}
+          {lead.summary && !aiAnalysis && (
             <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs font-bold text-purple-600">🤖 Análise IA</p>
@@ -180,21 +401,51 @@ export default function LeadModal({
           {messages.length > 0 ? (
             <div>
               <p className="text-sm font-semibold text-slate-700 mb-3">Histórico da Conversa</p>
-              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-                {messages.map(m => (
-                  <div key={m.id} className={`flex ${m.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}>
-                    <div className={`max-w-xs px-3.5 py-2.5 rounded-2xl text-sm ${
-                      m.direction === 'inbound'
-                        ? 'bg-slate-100 text-slate-800 rounded-tl-sm'
-                        : 'bg-green-600 text-white rounded-tr-sm'
-                    }`}>
-                      <p>{m.body}</p>
-                      <p className={`text-[10px] mt-1 ${m.direction === 'inbound' ? 'text-slate-400' : 'text-green-200'}`}>
-                        {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+              <div className="space-y-1.5 max-h-[28rem] overflow-y-auto pr-1">
+                {messages.map(m => {
+                  const isIn = m.direction === 'inbound';
+                  const time = new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                  const hasMedia = m.media_type && m.media_url;
+                  const bodyIsPlaceholder = m.body && ['[image]','[audio]','[video]','[document]','[sticker]'].includes(m.body);
+                  const showBody = m.body && !bodyIsPlaceholder;
+                  return (
+                    <div key={m.id} className={`flex ${isIn ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
+                        isIn ? 'bg-slate-100 text-slate-800 rounded-tl-sm' : 'bg-green-600 text-white rounded-tr-sm'
+                      }`}>
+                        {hasMedia && m.media_type === 'image' && (
+                          <a href={m.media_url} target="_blank" rel="noreferrer">
+                            <img src={m.media_url} alt="imagem" className="w-full max-w-[240px] rounded-xl mb-1 cursor-zoom-in" />
+                          </a>
+                        )}
+                        {hasMedia && m.media_type === 'audio' && (
+                          <div className="mb-1 w-full min-w-[200px]">
+                            <audio controls src={m.media_url} className="w-full" style={{ height: '38px' }} />
+                          </div>
+                        )}
+                        {hasMedia && m.media_type === 'video' && (
+                          <video controls src={m.media_url} className="w-full max-w-[240px] rounded-xl mb-1" />
+                        )}
+                        {hasMedia && m.media_type === 'document' && (
+                          <a href={m.media_url} target="_blank" rel="noreferrer"
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl mb-1 text-xs font-medium ${isIn ? 'bg-white/60 text-blue-600 hover:text-blue-800' : 'bg-white/20 text-white'}`}>
+                            <FileText size={14} className="shrink-0" />
+                            <span className="truncate">{m.media_filename || 'Documento'}</span>
+                            <Download size={12} className="shrink-0 ml-auto" />
+                          </a>
+                        )}
+                        {hasMedia && m.media_type === 'sticker' && (
+                          <img src={m.media_url} alt="sticker" className="w-20 h-20 mb-1" />
+                        )}
+                        {!hasMedia && bodyIsPlaceholder && (
+                          <p className="italic opacity-50 text-xs">{m.body}</p>
+                        )}
+                        {showBody && <p className="leading-snug">{m.body}</p>}
+                        <p className={`text-[10px] mt-1 text-right ${isIn ? 'text-slate-400' : 'text-green-200'}`}>{time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : lead.first_message ? (
@@ -203,6 +454,103 @@ export default function LeadModal({
               <p className="text-sm text-slate-700">{lead.first_message}</p>
             </div>
           ) : null}
+
+          {/* Atalho de sugestão IA perto do chat */}
+          {aiAnalysis?.resposta_sugerida && (
+            <div className="rounded-2xl border border-violet-200 overflow-hidden">
+              <button
+                onClick={() => setShowSuggestion(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-violet-50 hover:bg-violet-100 transition text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles size={13} className="text-violet-500 shrink-0" />
+                  <span className="text-xs font-bold text-violet-700">Sugestão IA</span>
+                </div>
+                {showSuggestion ? <ChevronUp size={14} className="text-violet-400" /> : <ChevronDown size={14} className="text-violet-400" />}
+              </button>
+              {showSuggestion && (
+                <div className="px-4 pb-3 pt-2 bg-white border-t border-violet-100">
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{aiAnalysis.resposta_sugerida}</p>
+                  <button
+                    onClick={() => { setChatText(aiAnalysis.resposta_sugerida); setShowSuggestion(false); }}
+                    className="mt-2 flex items-center gap-1.5 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 px-3 py-1.5 rounded-lg transition"
+                  >
+                    ✏️ Usar no chat
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Chat input */}
+          <div className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50">
+            <p className="px-4 pt-3 text-xs font-semibold text-slate-500">Enviar mensagem</p>
+            <input ref={fileInputRef} type="file" className="hidden"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+              onChange={e => { if (e.target.files?.[0]) { setSelectedFile(e.target.files[0]); setAudioBlob(null); } }} />
+
+            <div className="px-3 pb-3 pt-1 flex flex-col gap-1.5">
+              {/* Arquivo selecionado */}
+              {selectedFile && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-sky-50 border border-sky-200">
+                  <Paperclip size={12} className="text-sky-500 shrink-0" />
+                  <span className="flex-1 text-xs text-sky-700 truncate">{selectedFile.name} ({fmtFileSize(selectedFile.size)})</span>
+                  <button type="button" onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    className="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+                </div>
+              )}
+              {/* Áudio pronto */}
+              {audioBlob && !recording && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <Mic size={12} className="text-emerald-500 shrink-0" />
+                  <span className="text-xs text-emerald-700">Áudio — {fmtSecs(recordSecs)}</span>
+                  <button type="button" onClick={() => { setAudioBlob(null); setRecordSecs(0); }}
+                    className="ml-auto text-slate-400 hover:text-slate-600 text-sm">✕</button>
+                </div>
+              )}
+              {/* Gravando */}
+              {recording && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                  <span className="text-xs text-red-600 font-bold">Gravando... {fmtSecs(recordSecs)}</span>
+                  <button type="button" onClick={stopRecording}
+                    className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-100 text-red-600 text-xs font-bold">
+                    <Square size={10} /> Parar
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleChatSend} className="flex gap-1.5">
+                <button type="button" onClick={() => fileInputRef.current?.click()}
+                  className="p-2 rounded-xl border bg-white border-slate-200 text-slate-400 hover:text-slate-600 transition shrink-0" title="Arquivo / Imagem">
+                  <Paperclip size={14} />
+                </button>
+                <button type="button"
+                  onClick={recording ? stopRecording : startRecording}
+                  disabled={!!selectedFile || !!audioBlob}
+                  className={`p-2 rounded-xl border transition shrink-0 disabled:opacity-30 ${recording ? 'bg-red-50 border-red-200 text-red-500 animate-pulse' : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'}`}
+                  title={recording ? 'Parar gravação' : 'Gravar áudio'}>
+                  <Mic size={14} />
+                </button>
+                {!audioBlob && !selectedFile && !recording && (
+                  <input value={chatText} onChange={e => setChatText(e.target.value)} placeholder="Digite a mensagem..."
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                )}
+                {(audioBlob || selectedFile || recording) && <div className="flex-1" />}
+                {(audioBlob || selectedFile) ? (
+                  <button type="button" onClick={handleSendMedia} disabled={sendingMedia}
+                    className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition disabled:opacity-50 shrink-0">
+                    {sendingMedia ? '...' : <Send size={14} />}
+                  </button>
+                ) : (
+                  <button type="submit" disabled={chatSending || !chatText.trim() || recording}
+                    className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition disabled:opacity-50 shrink-0">
+                    <Send size={14} />
+                  </button>
+                )}
+              </form>
+            </div>
+          </div>
 
           {/* Notes */}
           <div>

@@ -1,4 +1,6 @@
+import { ExternalLink, CheckCircle2, RotateCcw } from 'lucide-react';
 import { STAGES } from '../lib/api';
+import { markAvaliacaoFeita, markAvaliacaoPendente } from '../lib/avaliacoesApi';
 
 function minutesSince(d: string) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 60000);
@@ -24,14 +26,16 @@ function isSameDay(isoDate: string, dayStr: string): boolean {
   return `${y}-${mo}-${da}` === dayStr;
 }
 
-export default function Pipeline({ leads, onSelect, onToggleAi, dayFilter }: {
+export default function Pipeline({ leads, onSelect, onToggleAi, dayFilter, avaliacoes, onAvaliacaoUpdated }: {
   leads: any[];
   onSelect: (l: any) => void;
   onToggleAi: (id: string, newMode: boolean) => void;
   dayFilter?: string | null;
+  avaliacoes?: any[];
+  onAvaliacaoUpdated?: () => void;
 }) {
   const byStage = (key: string) => leads
-    .filter(l => l.stage === key)
+    .filter(l => key === 'interessado' ? (l.stage === 'interessado' || l.stage === 'negociando') : l.stage === key)
     .filter(l => {
       if (!dayFilter) return true;
       const ref = l.last_message_at ?? l.created_at;
@@ -196,6 +200,77 @@ export default function Pipeline({ leads, onSelect, onToggleAi, dayFilter }: {
           </div>
         );
       })}
+
+      {/* ── Colunas Pós-Venda ──────────────────────────────── */}
+      {[
+        {
+          key: 'nao_feita',
+          label: '⏳ Aguard. Avaliação',
+          headerBg: '#b45309',
+          cardBorder: '#f59e0b',
+          items: (avaliacoes ?? []).filter(a => !a.avaliacao_feita),
+        },
+        {
+          key: 'feita',
+          label: '✅ Avaliação Feita',
+          headerBg: '#047857',
+          cardBorder: '#34d399',
+          items: (avaliacoes ?? []).filter(a => a.avaliacao_feita),
+        },
+      ].map(col => (
+        <div key={col.key} className="flex-shrink-0 flex flex-col rounded-xl overflow-hidden" style={{ width: 'calc((100vw - 96px - 24px) / 8)' }}>
+          <div className="px-3 py-3 flex items-center justify-between flex-shrink-0" style={{ backgroundColor: col.headerBg }}>
+            <span className="text-sm font-black text-white tracking-wider uppercase leading-none drop-shadow-md">{col.label}</span>
+            <span className="text-sm font-black bg-black/30 text-white px-2.5 py-0.5 rounded-full min-w-[26px] text-center">{col.items.length}</span>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-2 p-2 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full" style={{ background: 'rgba(10,20,55,0.5)' }}>
+            {col.items.map((a: any) => {
+              const feita = a.avaliacao_feita;
+              const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—';
+              return (
+                <div key={a.id} className="rounded-lg border p-3 transition-all"
+                  style={{ background: feita ? 'rgba(4,120,87,0.10)' : 'rgba(15,28,60,0.85)', borderColor: feita ? '#34d39940' : '#f59e0b30', borderLeftWidth: 3, borderLeftColor: col.cardBorder }}>
+                  <p className="text-sm font-black text-white truncate leading-tight">{a.nome}</p>
+                  <p className="text-xs text-white/40 font-semibold mt-0.5">+{a.telefone}</p>
+                  <p className="text-[10px] text-white/30 mt-0.5 truncate">{a.loja_origem}</p>
+                  <div className="flex items-center justify-between mt-2 gap-1">
+                    <span className="text-[10px] text-white/40">
+                      {feita ? `✓ ${fmtDate(a.data_confirmacao_avaliacao)}` : `Enviado ${fmtDate(a.data_envio_solicitacao)}`}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {a.link_google_loja && (
+                        <a href={a.link_google_loja} target="_blank" rel="noreferrer"
+                          className="p-1 rounded-md bg-blue-500/15 border border-blue-500/25 text-blue-300 hover:bg-blue-500/30 transition"
+                          onClick={e => e.stopPropagation()} title="Abrir Google Review">
+                          <ExternalLink size={10} />
+                        </a>
+                      )}
+                      <button
+                        onClick={async () => {
+                          if (feita) await markAvaliacaoPendente(a.id);
+                          else await markAvaliacaoFeita(a.id);
+                          onAvaliacaoUpdated?.();
+                        }}
+                        className={`p-1 rounded-md border transition ${feita
+                          ? 'bg-amber-500/15 border-amber-500/25 text-amber-300 hover:bg-amber-500/30'
+                          : 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/30'}`}
+                        title={feita ? 'Marcar como pendente' : 'Marcar como avaliado'}
+                      >
+                        {feita ? <RotateCcw size={10} /> : <CheckCircle2 size={10} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {!col.items.length && (
+              <div className="rounded-lg border border-dashed p-5 text-center mt-1" style={{ borderColor: col.cardBorder + '30' }}>
+                <p className="text-xs font-medium" style={{ color: col.cardBorder + '60' }}>Vazio</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

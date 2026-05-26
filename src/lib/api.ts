@@ -132,6 +132,16 @@ export async function sendFollowUp(lead: any, templateKey: string): Promise<bool
     const prev = lead.notes ? `${lead.notes}\n${note}` : note;
     await updateLeadNotes(lead.id, prev);
     lead.notes = prev;
+
+    // Move lead para Acompanhamento e incrementa contador de follow-ups
+    if (!['fechado', 'perdido'].includes(lead.stage)) {
+      await updateLeadStage(lead.id, 'acompanhamento');
+      lead.stage = 'acompanhamento';
+    }
+    const { data: cur } = await supabase.from('sp_leads').select('followup_count').eq('id', lead.id).single();
+    const newCount = (cur?.followup_count ?? 0) + 1;
+    await supabase.from('sp_leads').update({ followup_count: newCount, updated_at: new Date().toISOString() }).eq('id', lead.id);
+    lead.followup_count = newCount;
   }
   return ok;
 }

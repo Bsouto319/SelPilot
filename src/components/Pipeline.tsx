@@ -16,9 +16,27 @@ function formatTime(d: string) {
   return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${hm}`;
 }
 
-export default function Pipeline({ leads, onSelect, onToggleAi }: { leads: any[]; onSelect: (l: any) => void; onToggleAi: (id: string, newMode: boolean) => void }) {
+function isSameDay(isoDate: string, dayStr: string): boolean {
+  const d = new Date(isoDate);
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const da = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${da}` === dayStr;
+}
+
+export default function Pipeline({ leads, onSelect, onToggleAi, dayFilter }: {
+  leads: any[];
+  onSelect: (l: any) => void;
+  onToggleAi: (id: string, newMode: boolean) => void;
+  dayFilter?: string | null;
+}) {
   const byStage = (key: string) => leads
     .filter(l => l.stage === key)
+    .filter(l => {
+      if (!dayFilter) return true;
+      const ref = l.last_message_at ?? l.created_at;
+      return isSameDay(ref, dayFilter);
+    })
     .sort((a, b) => {
       const at = new Date(a.last_message_at ?? a.created_at).getTime();
       const bt = new Date(b.last_message_at ?? b.created_at).getTime();

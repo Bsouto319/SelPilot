@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText, CalendarDays, Volume2, VolumeX } from 'lucide-react';
+import { Search, Download, RefreshCw, Users, TrendingUp, CheckCircle2, BarChart3, FileText, CalendarDays, Volume2, VolumeX, ShieldCheck } from 'lucide-react';
 import Pipeline from './components/Pipeline';
 import LeadModal from './components/LeadModal';
 import ReportModal from './components/ReportModal';
 import ConnectionStatus from './components/ConnectionStatus';
+import AdminApp from './admin/AdminApp';
 import { fetchLeads, fetchStats, exportLeadsCSV, updateLeadAiMode, fetchBiaGlobalMode, setBiaGlobalMode } from './lib/api';
 import { supabase } from './lib/supabase';
 
@@ -21,6 +22,7 @@ export default function App() {
   const [newMsgAlert, setNewMsgAlert]   = useState(false);
   const [dayFilter, setDayFilter] = useState<string | null>(null);
   const [muted, setMuted] = useState(() => localStorage.getItem('sp_sound_muted') === 'true');
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const searchRef = useRef(search);
   searchRef.current = search;
@@ -223,6 +225,15 @@ export default function App() {
               <Download size={14} />
               <span>Exportar CSV</span>
             </button>
+
+            {/* Admin — botão discreto, sem label */}
+            <button
+              onClick={() => setShowAdmin(true)}
+              title="Admin"
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/30 transition"
+            >
+              <ShieldCheck size={15} className="text-white/30 hover:text-violet-300" />
+            </button>
           </div>
         </div>
 
@@ -336,6 +347,13 @@ export default function App() {
 
       {/* ── Report Modal ─────────────────────────────────────────── */}
       {showReport && <ReportModal onClose={() => setShowReport(false)} />}
+
+      {/* ── Admin overlay ────────────────────────────────────────── */}
+      {showAdmin && (
+        <div className="fixed inset-0 z-50">
+          <AdminApp onExit={() => setShowAdmin(false)} />
+        </div>
+      )}
 
       {/* ── Alertas flutuantes ───────────────────────────────────── */}
       {(newLeadAlert || newMsgAlert) && (

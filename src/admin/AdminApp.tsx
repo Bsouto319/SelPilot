@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   LogOut, LayoutDashboard, Store, Users, Settings,
-  Headphones, Lock, ShieldCheck, Menu, X,
+  Headphones, Lock, ShieldCheck, Menu, X, ArrowLeft,
 } from 'lucide-react';
 import Overview from './tabs/Overview';
 import Clients  from './tabs/Clients';
@@ -23,7 +23,7 @@ const TABS = [
   { id: 'support',  label: 'Suporte',     icon: Headphones },
 ];
 
-export default function AdminApp() {
+export default function AdminApp({ onExit }: { onExit?: () => void } = {}) {
   const [authed, setAuthed]     = useState(() => sessionStorage.getItem(AUTH_KEY) === '1');
   const [pwd, setPwd]           = useState('');
   const [err, setErr]           = useState(false);
@@ -67,7 +67,7 @@ export default function AdminApp() {
               autoFocus
               className={`w-full px-4 py-3.5 rounded-2xl bg-white/5 border text-white text-sm placeholder-white/25
                 focus:outline-none focus:ring-2 focus:ring-violet-500 transition
-                ${err ? 'border-red-500 shake' : 'border-white/10'}`}
+                ${err ? 'border-red-500' : 'border-white/10'}`}
             />
             {err && <p className="text-red-400 text-xs text-center font-semibold">Senha incorreta</p>}
             <button
@@ -76,6 +76,12 @@ export default function AdminApp() {
             >
               Entrar
             </button>
+            {onExit && (
+              <button type="button" onClick={onExit}
+                className="w-full py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 text-sm transition flex items-center justify-center gap-2">
+                <ArrowLeft size={14} /> Voltar ao Kanban
+              </button>
+            )}
           </form>
           <p className="text-center text-white/20 text-xs mt-6">SellPilot v2 · BTechSouto © 2025</p>
         </div>
@@ -123,17 +129,24 @@ export default function AdminApp() {
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/8">
+        <div className="p-3 border-t border-white/8 space-y-0.5">
           <div className="px-3 py-2 mb-1">
             <p className="text-white/30 text-[11px] font-bold">Bruno Souto</p>
             <p className="text-white/20 text-[10px]">BTechSouto Admin</p>
           </div>
+          {onExit && (
+            <button onClick={onExit}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm text-emerald-400/60 hover:text-emerald-300 hover:bg-emerald-500/10 transition">
+              <ArrowLeft size={14} />
+              Voltar ao Kanban
+            </button>
+          )}
           <button
             onClick={logout}
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm text-white/30 hover:text-white/60 hover:bg-white/5 transition"
           >
             <LogOut size={14} />
-            Sair
+            Sair da conta admin
           </button>
         </div>
       </aside>
@@ -185,7 +198,14 @@ export default function AdminApp() {
             <Menu size={20} />
           </button>
           <p className="text-white font-black text-sm">{currentTab.label}</p>
-          <button onClick={logout} className="text-white/30 text-xs font-bold">Sair</button>
+          <div className="flex items-center gap-3">
+            {onExit && (
+              <button onClick={onExit} className="text-emerald-400/70 text-xs font-bold flex items-center gap-1">
+                <ArrowLeft size={12} /> Kanban
+              </button>
+            )}
+            <button onClick={logout} className="text-white/30 text-xs font-bold">Sair</button>
+          </div>
         </header>
 
         {/* Page title (desktop) */}

@@ -77,6 +77,51 @@ export async function sendWhatsApp(phone: string, message: string): Promise<bool
   }
 }
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function sendMediaWhatsApp(phone: string, file: File): Promise<boolean> {
+  const baseUrl = import.meta.env.VITE_UAZAPI_URL as string;
+  const token   = import.meta.env.VITE_UAZAPI_TOKEN as string;
+  try {
+    const base64   = await blobToBase64(file);
+    const isImage  = file.type.startsWith('image/');
+    const isVideo  = file.type.startsWith('video/');
+    const endpoint = isImage ? '/send/image' : isVideo ? '/send/video' : '/send/document';
+    const body     = isImage
+      ? { number: phone, image: base64, caption: file.name }
+      : isVideo
+      ? { number: phone, video: base64, caption: file.name }
+      : { number: phone, document: base64, fileName: file.name };
+    const res = await fetch(`${baseUrl}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify(body),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+export async function sendPttWhatsApp(phone: string, blob: Blob): Promise<boolean> {
+  const baseUrl = import.meta.env.VITE_UAZAPI_URL as string;
+  const token   = import.meta.env.VITE_UAZAPI_TOKEN as string;
+  try {
+    const base64 = await blobToBase64(blob);
+    const res = await fetch(`${baseUrl}/send/ptt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify({ number: phone, audio: base64 }),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
 export async function sendFollowUp(lead: any, templateKey: string): Promise<boolean> {
   const tpl = FOLLOWUP_TEMPLATES.find(t => t.key === templateKey);
   if (!tpl) return false;
@@ -112,7 +157,16 @@ export async function fetchMessages(leadId: string) {
     .eq('lead_id', leadId)
     .order('created_at', { ascending: true });
   if (error) console.error('fetchMessages', error.message);
-  return data || [];
+
+  // Dedup frontend: mesma direção + mesmo corpo + mesmo minuto
+  const seen = new Set<string>();
+  return (data || []).filter(m => {
+    const minute = (m.created_at ?? '').slice(0, 16);
+    const key = `${m.direction}:${(m.body ?? '').trim().slice(0, 120)}:${minute}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export async function fetchStats() {
@@ -172,6 +226,21 @@ export async function setBiaGlobalMode(active: boolean): Promise<void> {
 export async function deleteLead(id: string) {
   const { error } = await supabase.from('sp_leads').delete().eq('id', id);
   if (error) console.error('deleteLead', error.message);
+}
+
+export async function analyzeLeadAI(leadId: string): Promise<{
+  intencao: string; urgencia: string; stage_sugerido: string;
+  resposta_sugerida: string; observacao: string;
+} | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('sellpilot-analyze-lead', {
+      body: { lead_id: leadId },
+    });
+    if (error || !data?.ok) return null;
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 export function exportLeadsCSV(leads: any[]) {

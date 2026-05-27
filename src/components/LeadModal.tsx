@@ -533,8 +533,15 @@ export default function LeadModal({
                   <Mic size={14} />
                 </button>
                 {!audioBlob && !selectedFile && !recording && (
-                  <input value={chatText} onChange={e => setChatText(e.target.value)} placeholder="Digite a mensagem..."
-                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  <textarea
+                    value={chatText}
+                    onChange={e => { setChatText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (chatText.trim() && !chatSending) handleChatSend(e as any); } }}
+                    placeholder="Digite a mensagem... (Enter = enviar, Shift+Enter = nova linha)"
+                    rows={1}
+                    style={{ minHeight: '38px', maxHeight: '120px', resize: 'none', overflowY: 'auto' }}
+                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
                 )}
                 {(audioBlob || selectedFile || recording) && <div className="flex-1" />}
                 {(audioBlob || selectedFile) ? (

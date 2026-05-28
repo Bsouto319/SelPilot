@@ -3,7 +3,7 @@ import { X, Phone, MessageCircle, Save, Trash2, Send, ChevronDown, ChevronUp, Ch
 import {
   STAGES, FOLLOWUP_TEMPLATES,
   fetchMessages, updateLeadStage, updateLeadNotes, deleteLead, sendFollowUp, analyzeLeadAI,
-  sendWhatsApp, sendMediaWhatsApp, sendPttWhatsApp,
+  sendWhatsApp, sendMediaWhatsApp, sendPttWhatsApp, deleteMessage,
 } from '../lib/api';
 import { supabase } from '../lib/supabase';
 
@@ -142,10 +142,10 @@ export default function LeadModal({
     if (!selectedFile && !audioBlob) return;
     setSendingMedia(true);
     if (audioBlob) {
-      await sendPttWhatsApp(lead.phone, audioBlob);
+      await sendPttWhatsApp(lead.phone, audioBlob, lead.id);
       setAudioBlob(null); setRecordSecs(0);
     } else if (selectedFile) {
-      await sendMediaWhatsApp(lead.phone, selectedFile);
+      await sendMediaWhatsApp(lead.phone, selectedFile, lead.id);
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -409,7 +409,7 @@ export default function LeadModal({
                   const bodyIsPlaceholder = m.body && ['[image]','[audio]','[video]','[document]','[sticker]'].includes(m.body);
                   const showBody = m.body && !bodyIsPlaceholder;
                   return (
-                    <div key={m.id} className={`flex ${isIn ? 'justify-start' : 'justify-end'}`}>
+                    <div key={m.id} className={`group flex items-end gap-1 ${isIn ? 'justify-start' : 'justify-end'}`}>
                       <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
                         isIn ? 'bg-slate-100 text-slate-800 rounded-tl-sm' : 'bg-green-600 text-white rounded-tr-sm'
                       }`}>
@@ -443,6 +443,18 @@ export default function LeadModal({
                         {showBody && <p className="leading-snug">{m.body}</p>}
                         <p className={`text-[10px] mt-1 text-right ${isIn ? 'text-slate-400' : 'text-green-200'}`}>{time}</p>
                       </div>
+                      {/* Apagar mensagem enviada */}
+                      {!isIn && (
+                        <button type="button" title="Apagar mensagem"
+                          onClick={async () => {
+                            if (!confirm('Apagar esta mensagem do histórico?')) return;
+                            await deleteMessage(m.id);
+                            setMessages(prev => prev.filter(msg => msg.id !== m.id));
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-red-100 text-red-300 hover:text-red-500 transition shrink-0">
+                          <Trash2 size={11} />
+                        </button>
+                      )}
                     </div>
                   );
                 })}

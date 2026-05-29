@@ -293,9 +293,8 @@ export default function App() {
         const yest = new Date(today); yest.setDate(today.getDate() - 1);
         const yesterdayStr = fmt(yest);
         const filteredCount = dayFilter ? leads.filter(l => {
-          const d = new Date(l.created_at);
-          const s = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          return s === dayFilter;
+          const fmtD = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+          return fmtD(l.created_at) === dayFilter || fmtD(l.last_message_at ?? l.created_at) === dayFilter;
         }).length : leads.length;
 
         return (

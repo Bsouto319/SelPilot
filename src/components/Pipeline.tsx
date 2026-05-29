@@ -38,8 +38,7 @@ export default function Pipeline({ leads, onSelect, onToggleAi, dayFilter, avali
     .filter(l => key === 'interessado' ? (l.stage === 'interessado' || l.stage === 'negociando') : l.stage === key)
     .filter(l => {
       if (!dayFilter) return true;
-      const ref = l.last_message_at ?? l.created_at;
-      return isSameDay(ref, dayFilter);
+      return isSameDay(l.created_at, dayFilter);
     })
     .sort((a, b) => {
       const at = new Date(a.last_message_at ?? a.created_at).getTime();

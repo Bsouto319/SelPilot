@@ -141,16 +141,35 @@ export default function LeadModal({
   async function handleSendMedia() {
     if (!selectedFile && !audioBlob) return;
     setSendingMedia(true);
-    if (audioBlob) {
-      await sendPttWhatsApp(lead.phone, audioBlob, lead.id);
+
+    const isAudio = !!audioBlob;
+    const fileName = selectedFile?.name || 'audio.ogg';
+    const mediaType = isAudio ? 'ptt' : (selectedFile?.type.startsWith('image/') ? 'image' : selectedFile?.type.startsWith('video/') ? 'video' : 'document');
+
+    // Optimistic update — mostra a mensagem imediatamente no chat
+    const optimisticMsg = {
+      id: `local-${Date.now()}`,
+      lead_id: lead.id,
+      direction: 'outbound',
+      body: fileName,
+      media_type: isAudio ? 'audio' : mediaType,
+      media_filename: fileName,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    if (isAudio) {
+      await sendPttWhatsApp(lead.phone, audioBlob!, lead.id);
       setAudioBlob(null); setRecordSecs(0);
     } else if (selectedFile) {
       await sendMediaWhatsApp(lead.phone, selectedFile, lead.id);
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+
     setSendingMedia(false);
-    setTimeout(() => fetchMessages(lead.id).then(setMessages), 2000);
+    // Refresh após 3s para substituir o optimistic pelo real do DB
+    setTimeout(() => fetchMessages(lead.id).then(setMessages), 3000);
   }
 
   async function handleSave() {

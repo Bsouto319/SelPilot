@@ -220,10 +220,10 @@ export default function Config() {
         <p className="text-rose-400 font-bold text-sm mb-2">⚠️ Zona de Risco</p>
         <p className="text-white/30 text-xs mb-3">
           Para reset de dados ou configurações avançadas, acesse o Supabase diretamente via MCP ou dashboard.
-          Projeto: <span className="font-mono text-white/50">pvphgusjofufwtyiyviu</span>
+          Projeto: <span className="font-mono text-white/50">yvkknzzwetwzhgdmxddn</span>
         </p>
         <a
-          href="https://supabase.com/dashboard/project/pvphgusjofufwtyiyviu"
+          href="https://supabase.com/dashboard/project/yvkknzzwetwzhgdmxddn"
           target="_blank" rel="noreferrer"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-300 text-sm font-semibold hover:bg-rose-500/25 transition"
         >

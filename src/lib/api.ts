@@ -91,7 +91,7 @@ export async function sendMediaWhatsApp(phone: string, file: File, leadId?: stri
     const isImage   = file.type.startsWith('image/');
     const isVideo   = file.type.startsWith('video/');
     const mediaType = isImage ? 'image' : isVideo ? 'video' : 'document';
-    const res = await fetch('https://pvphgusjofufwtyiyviu.supabase.co/functions/v1/sp-send-media', {
+    const res = await fetch('https://yvkknzzwetwzhgdmxddn.supabase.co/functions/v1/sp-send-media', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': (import.meta.env.VITE_SUPABASE_ANON_KEY as string)?.trim() },
       body: JSON.stringify({ phone, lead_id: leadId, media_type: mediaType, base64, file_name: file.name }),
@@ -103,7 +103,7 @@ export async function sendMediaWhatsApp(phone: string, file: File, leadId?: stri
 export async function sendPttWhatsApp(phone: string, blob: Blob, leadId?: string): Promise<boolean> {
   try {
     const base64 = await blobToBase64(blob);
-    const res = await fetch('https://pvphgusjofufwtyiyviu.supabase.co/functions/v1/sp-send-media', {
+    const res = await fetch('https://yvkknzzwetwzhgdmxddn.supabase.co/functions/v1/sp-send-media', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': (import.meta.env.VITE_SUPABASE_ANON_KEY as string)?.trim() },
       body: JSON.stringify({ phone, lead_id: leadId, media_type: 'ptt', base64 }),

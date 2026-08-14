@@ -6,6 +6,7 @@ export const STAGES = [
   { key: 'interessado',      label: 'Interessado',      color: 'bg-amber-400/15 text-amber-300',    headerBg: '#d97706', cardBorder: '#fbbf24' },
   { key: 'acompanhamento',   label: 'Acompanhamento',   color: 'bg-pink-400/15 text-pink-300',      headerBg: '#be185d', cardBorder: '#f472b6' },
   { key: 'proposta_enviada', label: 'Proposta',         color: 'bg-purple-400/15 text-purple-300',  headerBg: '#7c3aed', cardBorder: '#a78bfa' },
+  { key: 'negociando',       label: 'Negociando',       color: 'bg-orange-400/15 text-orange-300',  headerBg: '#ea580c', cardBorder: '#fb923c' },
   { key: 'fechado',          label: 'Visita Agendada',  color: 'bg-emerald-400/15 text-emerald-300', headerBg: '#059669', cardBorder: '#34d399' },
   { key: 'perdido',          label: 'Perdido ❌',        color: 'bg-rose-400/15 text-rose-300',      headerBg: '#dc2626', cardBorder: '#f87171' },
 ];

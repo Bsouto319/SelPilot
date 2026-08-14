@@ -2,12 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import { X, TrendingUp, Users, CheckCircle2, BarChart3, Lightbulb, Megaphone, AlertTriangle, Star, Download, Send, RefreshCw, CalendarDays } from 'lucide-react';
 import { STAGES } from '../lib/api';
 
-type Period = 'hoje' | 'semana' | 'mes' | 'personalizado';
+type Period = 'hoje' | 'semana' | 'mes' | 'tudo' | 'personalizado';
 
 const PERIOD_LABELS: Record<Exclude<Period, 'personalizado'>, string> = {
   hoje: 'Hoje',
   semana: '7 dias',
   mes: '30 dias',
+  tudo: 'Tudo',
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;

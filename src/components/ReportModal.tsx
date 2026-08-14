@@ -78,7 +78,7 @@ export default function ReportModal({ onClose }: { onClose: () => void }) {
     const sep  = '━━━━━━━━━━━━━━━━━━━━';
     const periodLabel = period === 'personalizado'
       ? `${dateFrom} a ${dateTo}`
-      : { hoje: 'hoje', semana: 'nos últimos 7 dias', mes: 'nos últimos 30 dias' }[period] ?? period;
+      : { hoje: 'hoje', semana: 'nos últimos 7 dias', mes: 'nos últimos 30 dias', tudo: 'em todo o histórico' }[period] ?? period;
 
     let msg = `📊 *Relatório SellPilot*\n`;
     msg += `📅 ${date}  |  _${periodLabel}_\n`;
